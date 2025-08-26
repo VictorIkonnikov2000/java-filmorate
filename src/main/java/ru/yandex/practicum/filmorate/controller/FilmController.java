@@ -12,6 +12,7 @@ import java.util.List;
 
 import static ru.yandex.practicum.filmorate.validate.FilmValidate.validateFilm;
 
+
 @RestController
 @RequestMapping("/films")
 @Slf4j
