@@ -22,7 +22,6 @@ public class FilmController {
     private Long filmIdCounter = 1L;
 
 
-
     @PostMapping("/films")
     public ResponseEntity<Film> createFilm(@RequestBody Film film) {
         validateFilm(film);
