@@ -22,7 +22,7 @@ public class FilmController {
     private Long filmIdCounter = 1L;
 
 
-    @PostMapping("/films")
+    @PostMapping
     public ResponseEntity<Film> createFilm(@RequestBody Film film) {
         validateFilm(film);
         film.setId(filmIdCounter++);
@@ -32,7 +32,7 @@ public class FilmController {
     }
 
 
-    @PutMapping("/films")
+    @PutMapping
     public ResponseEntity<Film> updateFilm(@RequestBody Film film) {
         validateFilm(film);
         for (int i = 0; i < films.size(); i++) {
@@ -47,7 +47,7 @@ public class FilmController {
     }
 
 
-    @GetMapping("/films")
+    @GetMapping
     public ResponseEntity<List<Film>> getAllFilms() {
         log.info("Получен запрос на получение всех фильмов.");
         return new ResponseEntity<>(films, HttpStatus.OK);

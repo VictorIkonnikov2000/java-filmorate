@@ -12,7 +12,7 @@ import java.util.List;
 import static ru.yandex.practicum.filmorate.validate.UserValidate.validateUser;
 
 @RestController
-@RequestMapping("/films")
+@RequestMapping("/users")
 @Slf4j
 public class UserController {
 
@@ -21,7 +21,7 @@ public class UserController {
     private Long userIdCounter = 1L;
 
 
-    @PostMapping("/users")
+    @PostMapping
     public ResponseEntity<User> createUser(@RequestBody User user) {
         validateUser(user);
         user.setId(userIdCounter++);
@@ -31,7 +31,7 @@ public class UserController {
     }
 
 
-    @PutMapping("/users")
+    @PutMapping
     public ResponseEntity<User> updateUser(@RequestBody User user) {
         validateUser(user);
         for (int i = 0; i < users.size(); i++) {
@@ -46,7 +46,7 @@ public class UserController {
     }
 
 
-    @GetMapping("/users")
+    @GetMapping
     public ResponseEntity<List<User>> getAllUsers() {
         log.info("Получен запрос на получение всех пользователей.");
         return new ResponseEntity<>(users, HttpStatus.OK);
