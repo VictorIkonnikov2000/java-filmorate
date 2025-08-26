@@ -46,7 +46,7 @@ public class FilmController {
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
-
+    //Гетмаппинг 
     @GetMapping
     public ResponseEntity<List<Film>> getAllFilms() {
         log.info("Получен запрос на получение всех фильмов.");
