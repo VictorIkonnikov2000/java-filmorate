@@ -8,16 +8,17 @@ import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.validate.UserValidate;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/users")
 @Slf4j
 public class UserController {
 
-    private final List<User> users = new ArrayList<>();
+    private final Map<Long, User> users = new HashMap<>(); // Изменили ArrayList на HashMap.  Ключ - id пользователя.
     private Long userIdCounter = 1L;
 
     @PostMapping
@@ -25,13 +26,13 @@ public class UserController {
         try {
             UserValidate.validateUser(user);
             user.setId(userIdCounter++);
-            users.add(user);
+            users.put(user.getId(), user); // Добавляем пользователя в HashMap по id
             log.info("Создан пользователь: {}", user);
             return new ResponseEntity<>(user, HttpStatus.CREATED);
 
-        } catch (ValidationException e) { //Отлавливаем  исключение валидации
+        } catch (ValidationException e) {
             log.error("Ошибка валидации при создании пользователя: {}", e.getMessage());
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST); // возвращаем 400
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -39,20 +40,12 @@ public class UserController {
     public ResponseEntity<User> updateUser(@RequestBody User user) {
         try {
             UserValidate.validateUser(user);
-            List<User> updatedUsers = users.stream().map(u -> {
-                if (u.getId().equals(user.getId())) {
-                    log.info("Обновляем пользователя: {}", user);
-                    return user;
-                }
-                return u;
-            }).collect(Collectors.toList());
-
-            if (users.size() == updatedUsers.size() && !users.contains(user)) { //Проверяем, был ли найден пользователь
+            if (!users.containsKey(user.getId())) {  // Проверяем, есть ли пользователь с таким ID в HashMap
                 log.warn("Пользователь с id {} не найден.", user.getId());
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND); //Если не был найден
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
             }
-            users.clear();
-            users.addAll(updatedUsers);
+            users.put(user.getId(), user); // Обновляем пользователя в HashMap по id
+            log.info("Обновляем пользователя: {}", user);
             return new ResponseEntity<>(user, HttpStatus.OK);
         } catch (ValidationException e) {
             log.error("Ошибка валидации при обновлении пользователя: {}", e.getMessage());
@@ -63,7 +56,8 @@ public class UserController {
     @GetMapping
     public ResponseEntity<List<User>> getAllUsers() {
         log.info("Запрос на получение списка всех пользователей.");
-        return new ResponseEntity<>(users, HttpStatus.OK);
+        return new ResponseEntity<>(new ArrayList<>(users.values()), HttpStatus.OK); // Возвращаем список пользователей из HashMap
     }
 }
+
 
