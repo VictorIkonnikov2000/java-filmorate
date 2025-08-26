@@ -8,7 +8,7 @@ import java.time.LocalDate;
 public class UserValidate {
 
     public static void validateUser(User user) {
-       
+
         if (user.getEmail() == null || user.getEmail().isEmpty() || !user.getEmail().contains("@")) {
             throw new ValidationException("Электронная почта должна быть указана и содержать символ @.");
         }
