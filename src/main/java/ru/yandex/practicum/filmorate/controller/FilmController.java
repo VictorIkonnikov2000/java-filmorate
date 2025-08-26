@@ -26,7 +26,7 @@ public class FilmController {
             films.add(film);   // Добавление в хранилище
             log.info("Добавлен фильм: {}", film);
             return new ResponseEntity<>(film, HttpStatus.CREATED); // 201 Created
-        }  catch (ValidationException e) {
+        } catch (ValidationException e) {
             log.warn("Ошибка валидации при создании фильма: {}", e.getMessage());
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST); // 400 Bad Request
         }
@@ -34,7 +34,7 @@ public class FilmController {
 
     @PutMapping
     public ResponseEntity<Film> updateFilm(@RequestBody Film film) {
-        try{
+        try {
             validateFilm(film);
             for (int i = 0; i < films.size(); i++) {
                 if (films.get(i).getId().equals(film.getId())) {
@@ -45,7 +45,7 @@ public class FilmController {
             }
             log.warn("Фильм с id {} не найден.", film.getId());
             return new ResponseEntity<>(HttpStatus.NOT_FOUND); // 404 Not Found
-        }  catch (ValidationException e) {
+        } catch (ValidationException e) {
             log.warn("Ошибка валидации при обновлении фильма: {}", e.getMessage());
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST); // 400 Bad Request
         }
