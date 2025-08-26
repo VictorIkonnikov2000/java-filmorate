@@ -18,21 +18,20 @@ import java.util.ArrayList;
 @Slf4j
 public class UserController {
 
-    private final Map<Long, User> users = new HashMap<>(); // Изменили ArrayList на HashMap.  Ключ - id пользователя.
+    private final Map<Long, User> users = new HashMap<>();
     private Long userIdCounter = 1L;
 
     @PostMapping
-    public ResponseEntity<User> createUser(@RequestBody User user) {
+    public ResponseEntity<?> createUser(@RequestBody User user) {
         try {
             UserValidate.validateUser(user);
             user.setId(userIdCounter++);
-            users.put(user.getId(), user); // Добавляем пользователя в HashMap по id
+            users.put(user.getId(), user);
             log.info("Создан пользователь: {}", user);
-            return new ResponseEntity<>(user, HttpStatus.CREATED);
-
+            return new ResponseEntity<>(user, HttpStatus.CREATED); // Возвращаем созданного пользователя с кодом 201
         } catch (ValidationException e) {
             log.error("Ошибка валидации при создании пользователя: {}", e.getMessage());
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST); // Возвращаем сообщение об ошибке и код 400
         }
     }
 
@@ -40,11 +39,11 @@ public class UserController {
     public ResponseEntity<User> updateUser(@RequestBody User user) {
         try {
             UserValidate.validateUser(user);
-            if (!users.containsKey(user.getId())) {  // Проверяем, есть ли пользователь с таким ID в HashMap
+            if (!users.containsKey(user.getId())) {
                 log.warn("Пользователь с id {} не найден.", user.getId());
                 return new ResponseEntity<>(HttpStatus.NOT_FOUND);
             }
-            users.put(user.getId(), user); // Обновляем пользователя в HashMap по id
+            users.put(user.getId(), user);
             log.info("Обновляем пользователя: {}", user);
             return new ResponseEntity<>(user, HttpStatus.OK);
         } catch (ValidationException e) {
@@ -56,8 +55,9 @@ public class UserController {
     @GetMapping
     public ResponseEntity<List<User>> getAllUsers() {
         log.info("Запрос на получение списка всех пользователей.");
-        return new ResponseEntity<>(new ArrayList<>(users.values()), HttpStatus.OK); // Возвращаем список пользователей из HashMap
+        return new ResponseEntity<>(new ArrayList<>(users.values()), HttpStatus.OK);
     }
 }
+
 
 
