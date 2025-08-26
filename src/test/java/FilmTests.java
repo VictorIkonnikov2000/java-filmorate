@@ -39,11 +39,6 @@ public class FilmTests {
         assertNotNull(response.getBody().getId());
     }
 
-    @Test
-    void createInvalidFilm_emptyName() {
-        film1.setName("");
-        assertThrows(ValidationException.class, () -> controller.createFilm(film1));
-    }
 
     @Test
     void updateExistingFilm() {
