@@ -25,21 +25,21 @@ public class FilmController {
     @PostMapping
     public ResponseEntity<?> createFilm(@RequestBody Film film) {
         try {
-            validateFilm(film); // Проверяем фильм на соответствие требованиям
-            film.setId(filmIdCounter++); // Увеличиваем счетчик ID и присваиваем ID фильму
-            films.put(film.getId(), film); // Сохраняем фильм в хранилище
-            log.info("Добавлен фильм: {}", film); // Логируем добавление фильма
-            return new ResponseEntity<>(film, HttpStatus.CREATED); // Возвращаем созданный фильм и статус 201
+            validateFilm(film);
+            film.setId(filmIdCounter++);
+            films.put(film.getId(), film);
+            log.info("Добавлен фильм: {}", film);
+            return new ResponseEntity<>(film, HttpStatus.CREATED);
         } catch (ValidationException e) {
-            log.warn("Ошибка валидации при создании фильма: {}", e.getMessage()); // Логируем ошибку валидации
-            Map<String, String> errorResponse = new HashMap<>(); // Создаем Map для формирования JSON-ответа
-            errorResponse.put("error", e.getMessage()); // Помещаем сообщение об ошибке в Map
-            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST); // Возвращаем JSON с сообщением об ошибке и статус 400
-        } catch (Exception e) { // Ловим все остальные исключения
-            log.error("Неожиданная ошибка при создании фильма: {}", e.getMessage(), e); // Логируем неожиданную ошибку
-            Map<String, String> errorResponse = new HashMap<>(); // Создаем Map для формирования JSON-ответа
-            errorResponse.put("error", "Внутренняя ошибка сервера"); // Помещаем сообщение об ошибке в Map
-            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR); // Возвращаем JSON с сообщением об ошибке и статус 500
+            log.warn("Ошибка валидации при создании фильма: {}", e.getMessage());
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            log.error("Неожиданная ошибка при создании фильма: {}", e.getMessage(), e);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Внутренняя ошибка сервера");
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -56,25 +56,24 @@ public class FilmController {
                 log.warn(errorMessage);
                 Map<String, String> errorResponse = new HashMap<>();
                 errorResponse.put("error", errorMessage);
-                return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND); //Не найдено, возвращаем ответ с телом
+                return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
             }
         } catch (ValidationException e) {
             log.warn("Ошибка валидации при обновлении фильма: {}", e.getMessage());
             Map<String, String> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
-            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST); // Возвращаем JSON с ошибкой и статус 400
-        } catch (Exception e) { // Ловим все остальные исключения
-            log.error("Неожиданная ошибка при обновлении фильма: {}", e.getMessage(), e); // Логируем неожиданную ошибку
-            Map<String, String> errorResponse = new HashMap<>(); // Создаем Map для формирования JSON-ответа
-            errorResponse.put("error", "Внутренняя ошибка сервера"); // Помещаем сообщение об ошибке в Map
-            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR); // Возвращаем JSON с сообщением об ошибке и статус 500
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            log.error("Неожиданная ошибка при обновлении фильма: {}", e.getMessage(), e);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Внутренняя ошибка сервера");
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     @GetMapping
     public ResponseEntity<List<Film>> getAllFilms() {
         log.info("Получен запрос на получение всех фильмов.");
-        // Получаем список всех фильмов из Map
         List<Film> filmList = films.values().stream().collect(Collectors.toList());
         return new ResponseEntity<>(filmList, HttpStatus.OK);
     }

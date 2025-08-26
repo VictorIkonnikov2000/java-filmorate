@@ -28,12 +28,12 @@ public class UserController {
             user.setId(userIdCounter++);
             users.put(user.getId(), user);
             log.info("Создан пользователь: {}", user);
-            return new ResponseEntity<>(user, HttpStatus.CREATED);  // Успешное создание
+            return new ResponseEntity<>(user, HttpStatus.CREATED);
         } catch (ValidationException e) {
             log.error("Ошибка валидации при создании пользователя: {}", e.getMessage());
             Map<String, String> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
-            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST); // ВОзвращаем 400
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -45,16 +45,16 @@ public class UserController {
                 log.warn("Пользователь с id {} не найден.", user.getId());
                 Map<String, String> errorResponse = new HashMap<>();
                 errorResponse.put("error", "Пользователь не найден");
-                return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);  // если нет пользователя - возвращаем 404 и сообщение
+                return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
             }
             users.put(user.getId(), user);
             log.info("Обновляем пользователя: {}", user);
-            return new ResponseEntity<>(user, HttpStatus.OK);  // успешное обновление - возвращаем обновленный объект
+            return new ResponseEntity<>(user, HttpStatus.OK);
         } catch (ValidationException e) {
             log.error("Ошибка валидации при обновлении пользователя: {}", e.getMessage());
             Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", e.getMessage());  // Помещаем сообщение об ошибке в Map
-            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);  // Возвращаем 400 и JSON
+            errorResponse.put("error", e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }
 
