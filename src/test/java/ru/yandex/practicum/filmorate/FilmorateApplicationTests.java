@@ -13,7 +13,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class FilmControllerTest {
+class FilmorateApplicationTests {
 
 	private FilmController controller;
 	private Film film1, film2;
