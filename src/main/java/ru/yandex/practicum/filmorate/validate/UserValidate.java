@@ -9,7 +9,8 @@ public class UserValidate {
 
     public static void validateUser(User user) {
         // Проверка email на null, пустоту и наличие символа @.
-        if (user.getEmaill() == null || user.getEmaill().isEmpty() || !user.getEmaill().contains("@")) {
+        // Исправлена опечатка в названии поля email (emaill -> email)
+        if (user.getEmail() == null || user.getEmail().isEmpty() || !user.getEmail().contains("@")) {
             throw new ValidationException("Электронная почта должна быть указана и содержать символ @.");
         }
 
@@ -30,4 +31,5 @@ public class UserValidate {
         }
     }
 }
+
 

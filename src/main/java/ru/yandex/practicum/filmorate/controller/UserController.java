@@ -24,21 +24,21 @@ public class UserController {
     @PostMapping
     public ResponseEntity<?> createUser(@RequestBody User user) {
         try {
-            UserValidate.validateUser(user);
+            UserValidate.validateUser(user); // Валидация пользователя
             user.setId(userIdCounter++);
             users.put(user.getId(), user);
             log.info("Создан пользователь: {}", user);
-            return new ResponseEntity<>(user, HttpStatus.CREATED); // Возвращаем созданного пользователя с кодом 201
+            return new ResponseEntity<>(user, HttpStatus.CREATED);
         } catch (ValidationException e) {
             log.error("Ошибка валидации при создании пользователя: {}", e.getMessage());
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST); // Возвращаем сообщение об ошибке и код 400
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 
     @PutMapping
     public ResponseEntity<User> updateUser(@RequestBody User user) {
         try {
-            UserValidate.validateUser(user);
+            UserValidate.validateUser(user); // Валидация пользователя
             if (!users.containsKey(user.getId())) {
                 log.warn("Пользователь с id {} не найден.", user.getId());
                 return new ResponseEntity<>(HttpStatus.NOT_FOUND);
