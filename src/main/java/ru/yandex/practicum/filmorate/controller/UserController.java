@@ -24,31 +24,37 @@ public class UserController {
     @PostMapping
     public ResponseEntity<?> createUser(@RequestBody User user) {
         try {
-            UserValidate.validateUser(user); // Валидация пользователя
+            UserValidate.validateUser(user);
             user.setId(userIdCounter++);
             users.put(user.getId(), user);
             log.info("Создан пользователь: {}", user);
-            return new ResponseEntity<>(user, HttpStatus.CREATED);
+            return new ResponseEntity<>(user, HttpStatus.CREATED);  // Успешное создание
         } catch (ValidationException e) {
             log.error("Ошибка валидации при создании пользователя: {}", e.getMessage());
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST); // ВОзвращаем 400
         }
     }
 
     @PutMapping
-    public ResponseEntity<User> updateUser(@RequestBody User user) {
+    public ResponseEntity<?> updateUser(@RequestBody User user) {
         try {
-            UserValidate.validateUser(user); // Валидация пользователя
+            UserValidate.validateUser(user);
             if (!users.containsKey(user.getId())) {
                 log.warn("Пользователь с id {} не найден.", user.getId());
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+                Map<String, String> errorResponse = new HashMap<>();
+                errorResponse.put("error", "Пользователь не найден");
+                return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);  // если нет пользователя - возвращаем 404 и сообщение
             }
             users.put(user.getId(), user);
             log.info("Обновляем пользователя: {}", user);
-            return new ResponseEntity<>(user, HttpStatus.OK);
+            return new ResponseEntity<>(user, HttpStatus.OK);  // успешное обновление - возвращаем обновленный объект
         } catch (ValidationException e) {
             log.error("Ошибка валидации при обновлении пользователя: {}", e.getMessage());
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());  // Помещаем сообщение об ошибке в Map
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);  // Возвращаем 400 и JSON
         }
     }
 
