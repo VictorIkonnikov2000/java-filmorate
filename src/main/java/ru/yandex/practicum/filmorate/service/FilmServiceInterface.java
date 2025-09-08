@@ -6,7 +6,7 @@ import ru.yandex.practicum.filmorate.storage.FilmStorage;
 import java.util.List;
 
 public interface FilmServiceInterface {
-    void FilmService(FilmStorage filmStorage);
+    void filmService(FilmStorage filmStorage);
 
     void addLike(Long filmId, Long userId);
 
