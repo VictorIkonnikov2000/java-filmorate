@@ -67,9 +67,11 @@ public class InMemoryUserStorage implements UserStorage {
 
     @Override
     public void addFriend(Long userId, Long friendId) {
-        if (!users.containsKey(userId) || !users.containsKey(friendId)) {
-            log.warn("Попытка добавить в друзья несуществующего пользователя.");
-            return;
+        if (!users.containsKey(userId)) {
+            throw new UserNotFoundException("Пользователь с id " + userId + " не найден.");
+        }
+        if (!users.containsKey(friendId)) {
+            throw new UserNotFoundException("Пользователь с id " + friendId + " не найден.");
         }
 
         friends.computeIfAbsent(userId, k -> new HashSet<>()).add(friendId);
@@ -79,6 +81,12 @@ public class InMemoryUserStorage implements UserStorage {
 
     @Override
     public void removeFriend(Long userId, Long friendId) {
+        if (!users.containsKey(userId)) {
+            throw new UserNotFoundException("Пользователь с id " + userId + " не найден.");
+        }
+        if (!users.containsKey(friendId)) {
+            throw new UserNotFoundException("Пользователь с id " + friendId + " не найден.");
+        }
         if (friends.containsKey(userId)) {
             friends.get(userId).remove(friendId);
         }
@@ -90,12 +98,12 @@ public class InMemoryUserStorage implements UserStorage {
 
     @Override
     public List<User> getFriends(Long userId) {
+        if (!users.containsKey(userId)) {
+            throw new UserNotFoundException("Пользователь с id " + userId + " не найден.");
+        }
         Set<Long> friendIds = friends.getOrDefault(userId, Collections.emptySet());
         return friendIds.stream()
-                .map(friendId -> {
-                    User user = users.get(friendId);
-                    return user;
-                })
+                .map(friendId -> users.get(friendId))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
