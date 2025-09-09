@@ -5,12 +5,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RequestBody;
+import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static ru.yandex.practicum.filmorate.validate.FilmValidate.validateFilm;
@@ -19,6 +18,7 @@ import static ru.yandex.practicum.filmorate.validate.FilmValidate.validateFilm;
 @Slf4j
 public class InMemoryFilmStorage implements FilmStorage {
     private final Map<Long, Film> films = new HashMap<>();
+    private final Map<Long, Set<Long>> filmLikes = new HashMap<>();
     private Long filmIdCounter = 1L;
 
     @Override
@@ -79,21 +79,38 @@ public class InMemoryFilmStorage implements FilmStorage {
 
     @Override
     public void addLike(Long filmId, Long userId) {
-
+        if (!films.containsKey(filmId)) {
+            throw new FilmNotFoundException("Фильм с id " + filmId + " не найден.");
+        }
+        //Если для фильма еще нет лайков, создаем новый set
+        filmLikes.computeIfAbsent(filmId, k -> new HashSet<>());
+        filmLikes.get(filmId).add(userId);
     }
 
     @Override
     public void removeLike(Long filmId, Long userId) {
-
+        if (!films.containsKey(filmId)) {
+            throw new FilmNotFoundException("Фильм с id " + filmId + " не найден.");
+        }
+        //Если для фильма еще нет лайков, создаем новый set (на всякий случай)
+        filmLikes.computeIfAbsent(filmId, k -> new HashSet<>());
+        filmLikes.get(filmId).remove(userId);
     }
 
     @Override
     public List<Film> getPopularFilms(int count) {
-        return List.of();
+        return films.values().stream()
+                .sorted((f1, f2) -> Integer.compare(Optional.ofNullable(filmLikes.get(f2.getId())).map(Set::size).orElse(0),
+                        Optional.ofNullable(filmLikes.get(f1.getId())).map(Set::size).orElse(0)))
+                .limit(count)
+                .collect(Collectors.toList());
     }
 
     @Override
     public Film getFilmById(Long filmId) {
-        return null;
+        if (!films.containsKey(filmId)) {
+            throw new FilmNotFoundException("Film with id " + filmId + " not found.");
+        }
+        return films.get(filmId);
     }
 }

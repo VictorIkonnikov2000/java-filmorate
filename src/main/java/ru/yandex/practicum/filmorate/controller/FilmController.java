@@ -65,8 +65,9 @@ public class FilmController {
         try {
             filmService.addLike(id, userId);
             log.info("Пользователь {} поставил лайк фильму {}.", userId, id);
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).build(); // 204 No Content корректнее
+            return ResponseEntity.ok().build(); // Возвращаем 200 OK
         } catch (FilmNotFoundException | UserNotFoundException e) {
+            log.warn("Фильм или пользователь не найден: {}", e.getMessage());//Логируем предупреждение
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); // 404 если не найден
         }
     }
@@ -77,8 +78,9 @@ public class FilmController {
         try {
             filmService.removeLike(id, userId);
             log.info("Пользователь {} удалил лайк у фильма {}.", userId, id);
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+            return ResponseEntity.ok().build(); // Возвращаем 200 OK
         } catch (FilmNotFoundException | UserNotFoundException e) {
+            log.warn("Фильм или пользователь не найден: {}", e.getMessage()); //Логируем предупреждение
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }

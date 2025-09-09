@@ -36,13 +36,14 @@ public class FilmService {
     }
 
     public void addLike(Long filmId, Long userId) {
-        // Check if film and user exist
+
         if (filmStorage.getFilmById(filmId) == null) {
             throw new FilmNotFoundException("Film with id " + filmId + " not found.");
         }
-        if (userStorage.getUserById(userId) == null) { // Using UserStorage
+        if (userStorage.getUserById(userId) == null) {
             throw new UserNotFoundException("User with id " + userId + " not found.");
         }
+
         filmStorage.addLike(filmId, userId);
     }
 
