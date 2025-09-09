@@ -76,4 +76,24 @@ public class InMemoryFilmStorage implements FilmStorage {
         List<Film> filmList = films.values().stream().collect(Collectors.toList());
         return new ResponseEntity<>(filmList, HttpStatus.OK);
     }
+
+    @Override
+    public void addLike(Long filmId, Long userId) {
+
+    }
+
+    @Override
+    public void removeLike(Long filmId, Long userId) {
+
+    }
+
+    @Override
+    public List<Film> getPopularFilms(int count) {
+        return List.of();
+    }
+
+    @Override
+    public Film getFilmById(Long filmId) {
+        return null;
+    }
 }

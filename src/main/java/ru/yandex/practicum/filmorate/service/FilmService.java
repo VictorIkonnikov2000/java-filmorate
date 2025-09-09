@@ -3,8 +3,11 @@ package ru.yandex.practicum.filmorate.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
+import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.util.List;
 
@@ -12,10 +15,12 @@ import java.util.List;
 public class FilmService {
 
     private final FilmStorage filmStorage;
+    private final UserStorage userStorage;
 
     @Autowired
-    public FilmService(FilmStorage filmStorage) {
+    public FilmService(FilmStorage filmStorage, UserStorage userStorage) {
         this.filmStorage = filmStorage;
+        this.userStorage = userStorage;
     }
 
     public ResponseEntity<?> createFilm(Film film) {
@@ -31,16 +36,33 @@ public class FilmService {
     }
 
     public void addLike(Long filmId, Long userId) {
-
+        // Check if film and user exist
+        if (filmStorage.getFilmById(filmId) == null) {
+            throw new FilmNotFoundException("Film with id " + filmId + " not found.");
+        }
+        if (userStorage.getUserById(userId) == null) { // Using UserStorage
+            throw new UserNotFoundException("User with id " + userId + " not found.");
+        }
+        filmStorage.addLike(filmId, userId);
     }
 
     public void removeLike(Long filmId, Long userId) {
-
+        // Check if film and user exist
+        if (filmStorage.getFilmById(filmId) == null) {
+            throw new FilmNotFoundException("Film with id " + filmId + " not found.");
+        }
+        if (userStorage.getUserById(userId) == null) { // Using UserStorage
+            throw new UserNotFoundException("User with id " + userId + " not found.");
+        }
+        filmStorage.removeLike(filmId, userId);
     }
 
     public List<Film> getPopularFilms(int count) {
+        return filmStorage.getPopularFilms(count);
+    }
 
-        return null;
+    public Film getFilmById(Long id) {
+        return filmStorage.getFilmById(id);
     }
 }
 

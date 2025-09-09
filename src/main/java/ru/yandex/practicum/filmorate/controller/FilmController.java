@@ -2,12 +2,15 @@ package ru.yandex.practicum.filmorate.controller;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/films")
@@ -45,18 +48,36 @@ public class FilmController {
         return response;
     }
 
+    @GetMapping("/{id}") // Добавлен метод для получения фильма по ID
+    public ResponseEntity<?> getFilmById(@PathVariable Long id) {
+        try {
+            Film film = filmService.getFilmById(id); // предполагается, что такой метод есть в FilmService
+            return new ResponseEntity<>(film, HttpStatus.OK);
+        } catch (FilmNotFoundException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
+        }
+    }
+
     @PutMapping("/{id}/like/{userId}")
     public void addLike(@PathVariable Long id, @PathVariable Long userId) {
         log.info("Получен запрос PUT /films/{}/like/{}", id, userId);
-        filmService.addLike(id, userId);
-        log.info("Пользователь {} поставил лайк фильму {}.", userId, id);
+        try {
+            filmService.addLike(id, userId);
+            log.info("Пользователь {} поставил лайк фильму {}.", userId, id);
+        } catch(FilmNotFoundException | ru.yandex.practicum.filmorate.exception.UserNotFoundException e) {
+            throw e;
+        }
     }
 
     @DeleteMapping("/{id}/like/{userId}")
     public void deleteLike(@PathVariable Long id, @PathVariable Long userId) {
         log.info("Получен запрос DELETE /films/{}/like/{}", id, userId);
-        filmService.removeLike(id, userId);
-        log.info("Пользователь {} удалил лайк у фильма {}.", userId, id);
+        try {
+            filmService.removeLike(id, userId);
+            log.info("Пользователь {} удалил лайк у фильма {}.", userId, id);
+        } catch(FilmNotFoundException | ru.yandex.practicum.filmorate.exception.UserNotFoundException e) {
+            throw e;
+        }
     }
 
     @GetMapping("/popular")
@@ -65,6 +86,16 @@ public class FilmController {
         List<Film> popularFilms = filmService.getPopularFilms(count);
         log.info("Список популярных фильмов: {}", popularFilms);
         return popularFilms;
+    }
+
+    @ExceptionHandler(FilmNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleFilmNotFoundException(FilmNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+    }
+
+    @ExceptionHandler(ru.yandex.practicum.filmorate.exception.UserNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleUserNotFoundException(ru.yandex.practicum.filmorate.exception.UserNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
     }
 }
 
