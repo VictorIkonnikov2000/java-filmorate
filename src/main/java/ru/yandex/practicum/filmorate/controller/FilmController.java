@@ -64,7 +64,7 @@ public class FilmController {
         try {
             filmService.addLike(id, userId);
             log.info("Пользователь {} поставил лайк фильму {}.", userId, id);
-        } catch(FilmNotFoundException | ru.yandex.practicum.filmorate.exception.UserNotFoundException e) {
+        } catch (FilmNotFoundException | ru.yandex.practicum.filmorate.exception.UserNotFoundException e) {
             throw e;
         }
     }
@@ -75,7 +75,7 @@ public class FilmController {
         try {
             filmService.removeLike(id, userId);
             log.info("Пользователь {} удалил лайк у фильма {}.", userId, id);
-        } catch(FilmNotFoundException | ru.yandex.practicum.filmorate.exception.UserNotFoundException e) {
+        } catch (FilmNotFoundException | ru.yandex.practicum.filmorate.exception.UserNotFoundException e) {
             throw e;
         }
     }
