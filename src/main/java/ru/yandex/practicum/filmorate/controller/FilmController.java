@@ -60,30 +60,31 @@ public class FilmController {
     }
 
     @PutMapping("/{id}/like/{userId}")
-    public ResponseEntity<Void> addLike(@PathVariable Long id, @PathVariable Long userId) {
+    public ResponseEntity<?> addLike(@PathVariable Long id, @PathVariable Long userId) {
         log.info("Получен запрос PUT /films/{}/like/{}", id, userId);
         try {
             filmService.addLike(id, userId);
             log.info("Пользователь {} поставил лайк фильму {}.", userId, id);
             return ResponseEntity.ok().build(); // Возвращаем 200 OK
         } catch (FilmNotFoundException | UserNotFoundException e) {
-            log.warn("Фильм или пользователь не найден: {}", e.getMessage());//Логируем предупреждение
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); // 404 если не найден
+            log.warn("Фильм или пользователь не найден: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом ошибки
         }
     }
 
     @DeleteMapping("/{id}/like/{userId}")
-    public ResponseEntity<Void> deleteLike(@PathVariable Long id, @PathVariable Long userId) {
+    public ResponseEntity<?> deleteLike(@PathVariable Long id, @PathVariable Long userId) {
         log.info("Получен запрос DELETE /films/{}/like/{}", id, userId);
         try {
             filmService.removeLike(id, userId);
             log.info("Пользователь {} удалил лайк у фильма {}.", userId, id);
             return ResponseEntity.ok().build(); // Возвращаем 200 OK
         } catch (FilmNotFoundException | UserNotFoundException e) {
-            log.warn("Фильм или пользователь не найден: {}", e.getMessage()); //Логируем предупреждение
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            log.warn("Фильм или пользователь не найден: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом ошибки
         }
     }
+
 
     @GetMapping("/popular")
     public List<Film> getPopularFilms(@RequestParam(defaultValue = "10") Integer count) {
