@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
+import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
 
@@ -59,24 +60,26 @@ public class FilmController {
     }
 
     @PutMapping("/{id}/like/{userId}")
-    public void addLike(@PathVariable Long id, @PathVariable Long userId) {
+    public ResponseEntity<Void> addLike(@PathVariable Long id, @PathVariable Long userId) {
         log.info("Получен запрос PUT /films/{}/like/{}", id, userId);
         try {
             filmService.addLike(id, userId);
             log.info("Пользователь {} поставил лайк фильму {}.", userId, id);
-        } catch (FilmNotFoundException | ru.yandex.practicum.filmorate.exception.UserNotFoundException e) {
-            throw e;
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build(); // 204 No Content корректнее
+        } catch (FilmNotFoundException | UserNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); // 404 если не найден
         }
     }
 
     @DeleteMapping("/{id}/like/{userId}")
-    public void deleteLike(@PathVariable Long id, @PathVariable Long userId) {
+    public ResponseEntity<Void> deleteLike(@PathVariable Long id, @PathVariable Long userId) {
         log.info("Получен запрос DELETE /films/{}/like/{}", id, userId);
         try {
             filmService.removeLike(id, userId);
             log.info("Пользователь {} удалил лайк у фильма {}.", userId, id);
-        } catch (FilmNotFoundException | ru.yandex.practicum.filmorate.exception.UserNotFoundException e) {
-            throw e;
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        } catch (FilmNotFoundException | UserNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
 
