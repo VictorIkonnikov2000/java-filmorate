@@ -1,82 +1,113 @@
 package ru.yandex.practicum.filmorate.controller;
 
+import jakarta.validation.constraints.Positive;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.service.FilmService;
 
-import java.util.HashMap;
+
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-
-import static ru.yandex.practicum.filmorate.validate.FilmValidate.validateFilm;
 
 @RestController
 @RequestMapping("/films")
 @Slf4j
+@Validated
 public class FilmController {
 
-    private final Map<Long, Film> films = new HashMap<>(); // Используем Map для хранения фильмов
-    private Long filmIdCounter = 1L;
+    private final FilmService filmService;
+
+    @Autowired
+    public FilmController(FilmService filmService) {
+        this.filmService = filmService;
+    }
 
     @PostMapping
     public ResponseEntity<?> createFilm(@RequestBody Film film) {
-        try {
-            validateFilm(film);
-            film.setId(filmIdCounter++);
-            films.put(film.getId(), film);
-            log.info("Добавлен фильм: {}", film);
-            return new ResponseEntity<>(film, HttpStatus.CREATED);
-        } catch (ValidationException e) {
-            log.warn("Ошибка валидации при создании фильма: {}", e.getMessage());
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", e.getMessage());
-            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
-        } catch (Exception e) {
-            log.error("Неожиданная ошибка при создании фильма: {}", e.getMessage(), e);
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Внутренняя ошибка сервера");
-            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        log.info("Получен запрос POST /films с телом: {}", film);
+        ResponseEntity<?> response = filmService.createFilm(film);
+        log.info("Ответ на запрос POST /films: {}", response);
+        return response;
     }
 
     @PutMapping
     public ResponseEntity<?> updateFilm(@RequestBody Film film) {
-        try {
-            validateFilm(film);
-            if (films.containsKey(film.getId())) {
-                films.put(film.getId(), film);
-                log.info("Обновлен фильм: {}", film);
-                return new ResponseEntity<>(film, HttpStatus.OK);
-            } else {
-                String errorMessage = "Фильм с id " + film.getId() + " не найден.";
-                log.warn(errorMessage);
-                Map<String, String> errorResponse = new HashMap<>();
-                errorResponse.put("error", errorMessage);
-                return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
-            }
-        } catch (ValidationException e) {
-            log.warn("Ошибка валидации при обновлении фильма: {}", e.getMessage());
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", e.getMessage());
-            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
-        } catch (Exception e) {
-            log.error("Неожиданная ошибка при обновлении фильма: {}", e.getMessage(), e);
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Внутренняя ошибка сервера");
-            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        log.info("Получен запрос PUT /films с телом: {}", film);
+        ResponseEntity<?> response = filmService.updateFilm(film);
+        log.info("Ответ на запрос PUT /films: {}", response);
+        return response;
     }
 
     @GetMapping
     public ResponseEntity<List<Film>> getAllFilms() {
-        log.info("Получен запрос на получение всех фильмов.");
-        List<Film> filmList = films.values().stream().collect(Collectors.toList());
-        return new ResponseEntity<>(filmList, HttpStatus.OK);
+        log.info("Получен запрос GET /films");
+        ResponseEntity<List<Film>> response = filmService.getAllFilms();
+        log.info("Ответ на запрос GET /films: {}", response.getBody());
+        return response;
+    }
+
+    @GetMapping("/{id}") // Добавлен метод для получения фильма по ID
+    public ResponseEntity<?> getFilmById(@PathVariable @Positive Long id) {
+        try {
+            Film film = filmService.getFilmById(id); // предполагается, что такой метод есть в FilmService
+            return new ResponseEntity<>(film, HttpStatus.OK);
+        } catch (NotFoundException e) {
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @PutMapping("/{id}/like/{userId}")
+    public ResponseEntity<?> addLike(@PathVariable @Positive Long id, @PathVariable @Positive Long userId) {
+        log.info("Получен запрос PUT /films/{}/like/{}", id, userId);
+        try {
+            filmService.addLike(id, userId);
+            log.info("Пользователь {} поставил лайк фильму {}.", userId, id);
+            return ResponseEntity.ok().build(); // Возвращаем 200 OK
+        } catch (NotFoundException e) {
+            log.warn("Фильм или пользователь не найден: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом ошибки
+        }
+    }
+
+    @DeleteMapping("/{id}/like/{userId}")
+    public ResponseEntity<?> deleteLike(@PathVariable @Positive Long id, @PathVariable @Positive Long userId) {
+        log.info("Получен запрос DELETE /films/{}/like/{}", id, userId);
+        try {
+            filmService.removeLike(id, userId);
+            log.info("Пользователь {} удалил лайк у фильма {}.", userId, id);
+            return ResponseEntity.ok().build(); // Возвращаем 200 OK
+        } catch (NotFoundException e) {
+            log.warn("Фильм или пользователь не найден: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом ошибки
+        }
+    }
+
+
+    @GetMapping("/popular")
+    public List<Film> getPopularFilms(@RequestParam(defaultValue = "10") Integer count) {
+        log.info("Получен запрос GET /films/popular с параметром count: {}", count);
+        List<Film> popularFilms = filmService.getPopularFilms(count);
+        log.info("Список популярных фильмов: {}", popularFilms);
+        return popularFilms;
+    }
+
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleFilmNotFoundException(NotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+    }
+
+    @ExceptionHandler(ru.yandex.practicum.filmorate.exception.NotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleUserNotFoundException(ru.yandex.practicum.filmorate.exception.NotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
     }
 }
+
+
 
 
