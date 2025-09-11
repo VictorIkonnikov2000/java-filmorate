@@ -4,7 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.validate.UserValidate;
@@ -68,10 +68,10 @@ public class InMemoryUserStorage implements UserStorage {
     @Override
     public void addFriend(Long userId, Long friendId) {
         if (!users.containsKey(userId)) {
-            throw new UserNotFoundException("Пользователь с id " + userId + " не найден.");
+            throw new NotFoundException("Пользователь с id " + userId + " не найден.");
         }
         if (!users.containsKey(friendId)) {
-            throw new UserNotFoundException("Пользователь с id " + friendId + " не найден.");
+            throw new NotFoundException("Пользователь с id " + friendId + " не найден.");
         }
 
         friends.computeIfAbsent(userId, k -> new HashSet<>()).add(friendId);
@@ -82,10 +82,10 @@ public class InMemoryUserStorage implements UserStorage {
     @Override
     public void removeFriend(Long userId, Long friendId) {
         if (!users.containsKey(userId)) {
-            throw new UserNotFoundException("Пользователь с id " + userId + " не найден.");
+            throw new NotFoundException("Пользователь с id " + userId + " не найден.");
         }
         if (!users.containsKey(friendId)) {
-            throw new UserNotFoundException("Пользователь с id " + friendId + " не найден.");
+            throw new NotFoundException("Пользователь с id " + friendId + " не найден.");
         }
         if (friends.containsKey(userId)) {
             friends.get(userId).remove(friendId);
@@ -99,7 +99,7 @@ public class InMemoryUserStorage implements UserStorage {
     @Override
     public List<User> getFriends(Long userId) {
         if (!users.containsKey(userId)) {
-            throw new UserNotFoundException("Пользователь с id " + userId + " не найден.");
+            throw new NotFoundException("Пользователь с id " + userId + " не найден.");
         }
         Set<Long> friendIds = friends.getOrDefault(userId, Collections.emptySet());
         return friendIds.stream()
@@ -127,7 +127,7 @@ public class InMemoryUserStorage implements UserStorage {
         User user = users.get(id);
         if (user == null) {
             log.warn("Пользователь с id {} не найден.", id);
-            throw new UserNotFoundException("Пользователь с id " + id + " не найден."); // Выбрасываем исключение, если пользователь не найден
+            throw new NotFoundException("Пользователь с id " + id + " не найден."); // Выбрасываем исключение, если пользователь не найден
         }
         return user;
     }

@@ -5,7 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.UserService;
 
@@ -55,7 +55,7 @@ public class UserController {
             userService.addFriend(id, friendId);
             log.info("Пользователи {} и {} добавлены в друзья.", id, friendId);
             return ResponseEntity.status(HttpStatus.OK).build();
-        } catch (UserNotFoundException e) {
+        } catch (NotFoundException e) {
             log.warn("Пользователь с id {} или {} не найден.", id, friendId);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом
         }
@@ -68,7 +68,7 @@ public class UserController {
             userService.removeFriend(id, friendId);
             log.info("Пользователи {} и {} удалены из друзей.", id, friendId);
             return ResponseEntity.status(HttpStatus.OK).build();
-        } catch (UserNotFoundException e) {
+        } catch (NotFoundException e) {
             log.warn("Пользователь с id {} или {} не найден.", id, friendId);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом
         }
@@ -81,7 +81,7 @@ public class UserController {
             List<User> friends = userService.getFriends(id);
             log.info("Список друзей пользователя {}: {}", id, friends);
             return new ResponseEntity<>(friends, HttpStatus.OK);
-        } catch (UserNotFoundException e) {
+        } catch (NotFoundException e) {
             log.warn("Пользователь с id {} не найден.", id);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом
         }
@@ -100,7 +100,7 @@ public class UserController {
         try {
             User user = userService.getUserById(id);
             return new ResponseEntity<>(user, HttpStatus.OK);
-        } catch (UserNotFoundException e) {
+        } catch (NotFoundException e) {
             log.warn("Пользователь с id {} не найден.", id);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом
         }

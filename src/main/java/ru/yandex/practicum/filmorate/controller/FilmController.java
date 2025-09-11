@@ -1,14 +1,16 @@
 package ru.yandex.practicum.filmorate.controller;
 
+import jakarta.validation.constraints.Positive;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
-import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
+
 
 import java.util.List;
 import java.util.Map;
@@ -16,6 +18,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/films")
 @Slf4j
+@Validated
 public class FilmController {
 
     private final FilmService filmService;
@@ -50,36 +53,36 @@ public class FilmController {
     }
 
     @GetMapping("/{id}") // Добавлен метод для получения фильма по ID
-    public ResponseEntity<?> getFilmById(@PathVariable Long id) {
+    public ResponseEntity<?> getFilmById(@PathVariable @Positive Long id) {
         try {
             Film film = filmService.getFilmById(id); // предполагается, что такой метод есть в FilmService
             return new ResponseEntity<>(film, HttpStatus.OK);
-        } catch (FilmNotFoundException e) {
+        } catch (NotFoundException e) {
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
         }
     }
 
     @PutMapping("/{id}/like/{userId}")
-    public ResponseEntity<?> addLike(@PathVariable Long id, @PathVariable Long userId) {
+    public ResponseEntity<?> addLike(@PathVariable @Positive Long id, @PathVariable @Positive Long userId) {
         log.info("Получен запрос PUT /films/{}/like/{}", id, userId);
         try {
             filmService.addLike(id, userId);
             log.info("Пользователь {} поставил лайк фильму {}.", userId, id);
             return ResponseEntity.ok().build(); // Возвращаем 200 OK
-        } catch (FilmNotFoundException | UserNotFoundException e) {
+        } catch (NotFoundException e) {
             log.warn("Фильм или пользователь не найден: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом ошибки
         }
     }
 
     @DeleteMapping("/{id}/like/{userId}")
-    public ResponseEntity<?> deleteLike(@PathVariable Long id, @PathVariable Long userId) {
+    public ResponseEntity<?> deleteLike(@PathVariable @Positive Long id, @PathVariable @Positive Long userId) {
         log.info("Получен запрос DELETE /films/{}/like/{}", id, userId);
         try {
             filmService.removeLike(id, userId);
             log.info("Пользователь {} удалил лайк у фильма {}.", userId, id);
             return ResponseEntity.ok().build(); // Возвращаем 200 OK
-        } catch (FilmNotFoundException | UserNotFoundException e) {
+        } catch (NotFoundException e) {
             log.warn("Фильм или пользователь не найден: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом ошибки
         }
@@ -94,13 +97,13 @@ public class FilmController {
         return popularFilms;
     }
 
-    @ExceptionHandler(FilmNotFoundException.class)
-    public ResponseEntity<Map<String, String>> handleFilmNotFoundException(FilmNotFoundException e) {
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleFilmNotFoundException(NotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
     }
 
-    @ExceptionHandler(ru.yandex.practicum.filmorate.exception.UserNotFoundException.class)
-    public ResponseEntity<Map<String, String>> handleUserNotFoundException(ru.yandex.practicum.filmorate.exception.UserNotFoundException e) {
+    @ExceptionHandler(ru.yandex.practicum.filmorate.exception.NotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleUserNotFoundException(ru.yandex.practicum.filmorate.exception.NotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
     }
 }

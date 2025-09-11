@@ -3,8 +3,7 @@ package ru.yandex.practicum.filmorate.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
-import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
@@ -38,10 +37,10 @@ public class FilmService {
     public void addLike(Long filmId, Long userId) {
 
         if (filmStorage.getFilmById(filmId) == null) {
-            throw new FilmNotFoundException("Film with id " + filmId + " not found.");
+            throw new NotFoundException("Film with id " + filmId + " not found.");
         }
         if (userStorage.getUserById(userId) == null) {
-            throw new UserNotFoundException("User with id " + userId + " not found.");
+            throw new NotFoundException("User with id " + userId + " not found.");
         }
 
         filmStorage.addLike(filmId, userId);
@@ -50,10 +49,10 @@ public class FilmService {
     public void removeLike(Long filmId, Long userId) {
         // Check if film and user exist
         if (filmStorage.getFilmById(filmId) == null) {
-            throw new FilmNotFoundException("Film with id " + filmId + " not found.");
+            throw new NotFoundException("Film with id " + filmId + " not found.");
         }
         if (userStorage.getUserById(userId) == null) { // Using UserStorage
-            throw new UserNotFoundException("User with id " + userId + " not found.");
+            throw new NotFoundException("User with id " + userId + " not found.");
         }
         filmStorage.removeLike(filmId, userId);
     }

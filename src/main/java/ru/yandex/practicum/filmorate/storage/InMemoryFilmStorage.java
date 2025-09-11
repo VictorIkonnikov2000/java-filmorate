@@ -5,7 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RequestBody;
-import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 
@@ -80,7 +80,7 @@ public class InMemoryFilmStorage implements FilmStorage {
     @Override
     public void addLike(Long filmId, Long userId) {
         if (!films.containsKey(filmId)) {
-            throw new FilmNotFoundException("Фильм с id " + filmId + " не найден.");
+            throw new NotFoundException("Фильм с id " + filmId + " не найден.");
         }
         //Если для фильма еще нет лайков, создаем новый set
         filmLikes.computeIfAbsent(filmId, k -> new HashSet<>());
@@ -90,7 +90,7 @@ public class InMemoryFilmStorage implements FilmStorage {
     @Override
     public void removeLike(Long filmId, Long userId) {
         if (!films.containsKey(filmId)) {
-            throw new FilmNotFoundException("Фильм с id " + filmId + " не найден.");
+            throw new NotFoundException("Фильм с id " + filmId + " не найден.");
         }
         //Если для фильма еще нет лайков, создаем новый set (на всякий случай)
         filmLikes.computeIfAbsent(filmId, k -> new HashSet<>());
@@ -109,7 +109,7 @@ public class InMemoryFilmStorage implements FilmStorage {
     @Override
     public Film getFilmById(Long filmId) {
         if (!films.containsKey(filmId)) {
-            throw new FilmNotFoundException("Film with id " + filmId + " not found.");
+            throw new NotFoundException("Film with id " + filmId + " not found.");
         }
         return films.get(filmId);
     }
