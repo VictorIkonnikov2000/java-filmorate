@@ -79,7 +79,7 @@ public class FilmController {
     public ResponseEntity<?> deleteLike(@PathVariable @Positive Long id, @PathVariable @Positive Long userId) {
         log.info("Получен запрос DELETE /films/{}/like/{}", id, userId);
         try {
-            filmService.removeLike(id, userId);
+            filmService.removeLike(id, userId);//изменил
             log.info("Пользователь {} удалил лайк у фильма {}.", userId, id);
             return ResponseEntity.ok().build(); // Возвращаем 200 OK
         } catch (NotFoundException e) {
