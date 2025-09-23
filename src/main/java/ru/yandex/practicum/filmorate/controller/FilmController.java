@@ -1,24 +1,19 @@
 package ru.yandex.practicum.filmorate.controller;
 
-import jakarta.validation.constraints.Positive;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
 
-
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/films")
 @Slf4j
-@Validated
 public class FilmController {
 
     private final FilmService filmService;
@@ -28,81 +23,62 @@ public class FilmController {
         this.filmService = filmService;
     }
 
-
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)  // Возвращаем 201 Created
-    public Film createFilm(@RequestBody Film film) {
-        log.info("Получен запрос POST /films с телом: {}", film);
-        return filmService.createFilm(film);
+    public ResponseEntity<Film> createFilm(@Valid @RequestBody Film film) {
+        log.info("Received POST request for /films with body: {}", film);
+        Film createdFilm = filmService.createFilm(film);
+        log.info("Film created successfully with id: {}", createdFilm.getId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdFilm);  // Explicitly set status and body
     }
 
     @PutMapping
-    public Film updateFilm(@RequestBody Film film) {
-        log.info("Получен запрос PUT /films с телом: {}", film);
-        return filmService.updateFilm(film);
+    public ResponseEntity<Film> updateFilm(@Valid @RequestBody Film film) {
+        log.info("Received PUT request for /films with body: {}", film);
+        Film updatedFilm = filmService.updateFilm(film);
+        log.info("Film updated successfully with id: {}", updatedFilm.getId());
+        return ResponseEntity.ok(updatedFilm);
     }
 
     @GetMapping
-    public List<Film> getAllFilms() {
-        log.info("Получен запрос GET /films");
-        return filmService.getAllFilms();
+    public ResponseEntity<List<Film>> getAllFilms() {
+        log.info("Received GET request for /films");
+        List<Film> films = filmService.getAllFilms();
+        log.info("Returning {} films", films.size());
+        return ResponseEntity.ok(films);
     }
 
-    @GetMapping("/{id}") // Добавлен метод для получения фильма по ID
-    public ResponseEntity<?> getFilmById(@PathVariable @Positive Long id) {
-        try {
-            Film film = filmService.getFilmById(id); // предполагается, что такой метод есть в FilmService
-            return new ResponseEntity<>(film, HttpStatus.OK);
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        }
+    @GetMapping("/{id}")
+    public ResponseEntity<Film> getFilmById(@PathVariable Long id) {
+        log.info("Received GET request for /films/{}", id);
+        Film film = filmService.getFilmById(id);
+        log.info("Returning film: {}", film);
+        return ResponseEntity.ok(film);
     }
 
     @PutMapping("/{id}/like/{userId}")
-    public ResponseEntity<?> addLike(@PathVariable @Positive Long id, @PathVariable @Positive Long userId) {
-        log.info("Получен запрос PUT /films/{}/like/{}", id, userId);
-        try {
-            filmService.addLike(id, userId);
-            log.info("Пользователь {} поставил лайк фильму {}.", userId, id);
-            return ResponseEntity.ok().build(); // Возвращаем 200 OK
-        } catch (NotFoundException e) {
-            log.warn("Фильм или пользователь не найден: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом ошибки
-        }
+    public ResponseEntity<Void> addLike(@PathVariable Long id, @PathVariable Long userId) {
+        log.info("Received PUT request for /films/{}/like/{}", id, userId);
+        filmService.addLike(id, userId);
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}/like/{userId}")
-    public ResponseEntity<?> deleteLike(@PathVariable @Positive Long id, @PathVariable @Positive Long userId) {
-        log.info("Получен запрос DELETE /films/{}/like/{}", id, userId);
-        try {
-            filmService.removeLike(id, userId);//изменил
-            log.info("Пользователь {} удалил лайк у фильма {}.", userId, id);
-            return ResponseEntity.ok().build(); // Возвращаем 200 OK
-        } catch (NotFoundException e) {
-            log.warn("Фильм или пользователь не найден: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом ошибки
-        }
+    public ResponseEntity<Void> removeLike(@PathVariable Long id, @PathVariable Long userId) {
+        log.info("Received DELETE request for /films/{}/like/{}", id, userId);
+        filmService.removeLike(id, userId);
+        return ResponseEntity.noContent().build();
     }
-
 
     @GetMapping("/popular")
-    public List<Film> getPopularFilms(@RequestParam(defaultValue = "10") Integer count) {
-        log.info("Получен запрос GET /films/popular с параметром count: {}", count);
+    public ResponseEntity<List<Film>> getPopularFilms(@RequestParam(defaultValue = "10") int count) {
+        log.info("Received GET request for /films/popular?count={}", count);
         List<Film> popularFilms = filmService.getPopularFilms(count);
-        log.info("Список популярных фильмов: {}", popularFilms);
-        return popularFilms;
-    }
-
-    @ExceptionHandler(NotFoundException.class)
-    public ResponseEntity<Map<String, String>> handleFilmNotFoundException(NotFoundException e) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
-    }
-
-    @ExceptionHandler(ru.yandex.practicum.filmorate.exception.NotFoundException.class)
-    public ResponseEntity<Map<String, String>> handleUserNotFoundException(ru.yandex.practicum.filmorate.exception.NotFoundException e) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        log.info("Returning {} popular films", popularFilms.size());
+        return ResponseEntity.ok(popularFilms);
     }
 }
+
+
 
 
 

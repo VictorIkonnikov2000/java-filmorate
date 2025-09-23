@@ -7,7 +7,6 @@ import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 
-
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -22,28 +21,24 @@ public class InMemoryFilmStorage implements FilmStorage {
 
     @Override
     public Film createFilm(Film film) {
-        // Проверяем, что жанры не null, иначе инициализируем пустой список
-        if (film.getGenres() == null) {
-            film.setGenres(new ArrayList<>());
-        }
+        log.info("Creating film in storage: {}", film);
 
-        // Валидация MPA и жанров (теперь вызывается из Film, если нужно)
+        // Валидация MPA и жанров (теперь вызывается из Film)
         try {
             film.validate();
         } catch (ValidationException e) {
+            log.error("Film validation failed: {}", e.getMessage());
             throw e; // пробрасываем исключение
         }
+
         film.setId(filmIdCounter++);
         films.put(film.getId(), film);
-        log.info("Добавлен фильм: {}", film);
+        log.info("Film added to storage: {}", film);
         return film;
     }
 
     @Override
     public Film updateFilm(Film film) {
-        if (film.getGenres() == null) {
-            film.setGenres(new ArrayList<>());
-        }
         try {
             film.validate();
         } catch (ValidationException e) {
@@ -100,3 +95,4 @@ public class InMemoryFilmStorage implements FilmStorage {
         return films.get(filmId);
     }
 }
+

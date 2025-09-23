@@ -1,9 +1,11 @@
 package ru.yandex.practicum.filmorate.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.MpaRating;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.GenreStorage;
 import ru.yandex.practicum.filmorate.storage.MpaRatingStorage;
@@ -12,6 +14,7 @@ import ru.yandex.practicum.filmorate.storage.UserStorage;
 import java.util.List;
 
 @Service
+@Slf4j
 public class FilmService {
 
     private final FilmStorage filmStorage;
@@ -20,18 +23,33 @@ public class FilmService {
     private final MpaRatingStorage mpaRatingStorage;
 
     @Autowired
-    public FilmService(FilmStorage filmStorage, UserStorage userStorage, GenreStorage genreStorage, MpaRatingStorage mpaStorage) {
+    public FilmService(FilmStorage filmStorage, UserStorage userStorage, GenreStorage genreStorage, MpaRatingStorage mpaRatingStorage) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
         this.genreStorage = genreStorage;
-        this.mpaRatingStorage = mpaStorage;
+        this.mpaRatingStorage = mpaRatingStorage;
     }
 
     public Film createFilm(Film film) {
-        return filmStorage.createFilm(film); // Возвращаем созданный фильм
+        log.info("Creating film: {}", film);
+        // Получаем MPA рейтинг из хранилища по id
+        MpaRating mpa = mpaRatingStorage.getMpaRatingById(film.getMpa().getId());
+        if (mpa == null) {
+            throw new NotFoundException("MpaRating with id " + film.getMpa().getId() + " not found.");
+        }
+        film.setMpa(mpa); // Устанавливаем фильм
+        Film createdFilm = filmStorage.createFilm(film);
+        log.info("Film created successfully with id: {}", createdFilm.getId());
+        return createdFilm;
     }
 
     public Film updateFilm(Film film) {
+        // Получаем MPA рейтинг из хранилища по id
+        MpaRating mpa = mpaRatingStorage.getMpaRatingById(film.getMpa().getId());
+        if (mpa == null) {
+            throw new NotFoundException("MpaRating with id " + film.getMpa().getId() + " not found.");
+        }
+        film.setMpa(mpa); // Устанавливаем фильм
         return filmStorage.updateFilm(film); // Возвращаем обновленный фильм
     }
 
@@ -70,5 +88,6 @@ public class FilmService {
         return filmStorage.getFilmById(id);
     }
 }
+
 
 

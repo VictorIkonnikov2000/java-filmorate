@@ -1,56 +1,53 @@
 package ru.yandex.practicum.filmorate.model;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 
 
 @Data
 public class Film {
-   Long id;
-   String name;
-   String description;
-   LocalDate releaseDate;
-   Integer duration;
-   List<String> genres; // Добавляем поле для хранения списка жанров
-   MpaRating mpa;
+   private Long id;@NotBlank(message = "Name cannot be blank")
+   private String name;
+
+   @Size(max = 200, message = "Description cannot exceed 200 characters")
+   private String description;
+
+   @NotNull(message = "Release date cannot be null")
+   private LocalDate releaseDate;
+
+   @Positive(message = "Duration must be positive")
+   private Integer duration;
+
+   private List<String> genres;
+
+   @NotNull(message = "MPA Rating cannot be null")
+   private MpaRating mpa;
 
 
-   public Film(Long id, String name, String description, LocalDate releaseDate, List<String> genres, Integer duration, MpaRating mpa) {
-      this.id = id;
-      this.name = name;
-      this.description = description;
-      this.releaseDate = releaseDate;
-      this.genres = genres;
-      this.duration = duration;
-      this.mpa = mpa;
+   public void setGenres(List<String> genres) {
+      this.genres = (genres != null) ? genres : Collections.emptyList();
    }
 
-   private static final int MAX_DESCRIPTION_LENGTH = 200;
+   public List<String> getGenres() {
+      return (genres != null) ? genres : Collections.emptyList();
+   }
+
+
    private static final LocalDate MIN_RELEASE_DATE = LocalDate.of(1895, 12, 28);
 
    public void validate() throws ValidationException {
-      if (name == null || name.isEmpty()) {
-         throw new ValidationException("Название фильма не может быть пустым.");
+      if (releaseDate.isBefore(MIN_RELEASE_DATE)) {
+         throw new ValidationException("Release date cannot be before 1895-12-28");
       }
-
-      if (description != null && description.length() > MAX_DESCRIPTION_LENGTH) {
-         throw new ValidationException("Описание фильма не может превышать 200 символов.");
-      }
-
-      if (releaseDate != null && releaseDate.isBefore(MIN_RELEASE_DATE)) {
-         throw new ValidationException("Дата релиза фильма не может быть раньше 28 декабря 1895 года.");
-      }
-
-      if (duration <= 0) {
-         throw new ValidationException("Продолжительность фильма должна быть положительной.");
-      }
-
-      if (mpa == null) {
-         throw new ValidationException("MPA рейтинг не может быть пустым.");
-      }
-
    }
 }
+
+

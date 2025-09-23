@@ -5,6 +5,7 @@ import ru.yandex.practicum.filmorate.model.MpaRating;
 import java.util.List;
 
 public interface MpaRatingStorage {
+    MpaRating getMpaRatingById(int id);
     /**
      * Получает список всех рейтингов MPA.
      *

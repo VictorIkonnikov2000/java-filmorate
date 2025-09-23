@@ -1,20 +1,14 @@
 package ru.yandex.practicum.filmorate.model;
 
-public enum MpaRating {
-    G(1),
-    PG(2),
-    PG13(3),
-    R(4),
-    NC17(5);
+import lombok.Data;
 
-    private final int id; // Добавляем поле для хранения ID
+@Data
+public class MpaRating {
+    private int id;
+    private String name;
 
-    MpaRating(int id) { // Создаем конструктор для установки ID
+    public MpaRating(int id, String name) {
         this.id = id;
-    }
-
-    public int getId() { // Создаем метод для получения ID
-        return id;
+        this.name = name;
     }
 }
-
