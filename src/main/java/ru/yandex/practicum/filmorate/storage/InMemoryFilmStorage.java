@@ -27,21 +27,28 @@ public class InMemoryFilmStorage implements FilmStorage {
         if (film.getGenres() == null) {
             film.setGenres(new ArrayList<>());
         }
-        //Валидация фильма, если не валиден - пробрасываем исключение
-        if (!FilmValidate.validateFilm(film)) {
-            throw new ValidationException("Ошибка валидации фильма");
-        }
 
+        // Валидация MPA и жанров (теперь вызывается из Film, если нужно)
+        try {
+            film.validate();
+        } catch (ValidationException e) {
+            throw e; // пробрасываем исключение
+        }
         film.setId(filmIdCounter++);
         films.put(film.getId(), film);
         log.info("Добавлен фильм: {}", film);
         return film;
     }
-
-
     @Override
     public Film updateFilm(Film film) {
-        validateFilm(film); // Валидация
+        if (film.getGenres() == null) {
+            film.setGenres(new ArrayList<>());
+        }
+        try {
+            film.validate();
+        } catch (ValidationException e) {
+            throw e; // пробрасываем исключение
+        }
         if (!films.containsKey(film.getId())) {
             throw new NotFoundException("Фильм с id " + film.getId() + " не найден.");
         }
