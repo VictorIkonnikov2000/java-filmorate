@@ -6,12 +6,11 @@ import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.validate.FilmValidate;
+
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static ru.yandex.practicum.filmorate.validate.FilmValidate.validateFilm;
 
 @Component
 @Slf4j
@@ -39,6 +38,7 @@ public class InMemoryFilmStorage implements FilmStorage {
         log.info("Добавлен фильм: {}", film);
         return film;
     }
+
     @Override
     public Film updateFilm(Film film) {
         if (film.getGenres() == null) {

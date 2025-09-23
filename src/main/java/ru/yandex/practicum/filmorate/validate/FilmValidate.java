@@ -32,6 +32,7 @@ public class FilmValidate {
         }
         return true; //Возвращаем true, если валидация пройдена.
     }
+
 }
 
 
