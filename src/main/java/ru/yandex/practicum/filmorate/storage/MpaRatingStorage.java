@@ -6,6 +6,7 @@ import java.util.List;
 
 public interface MpaRatingStorage {
     MpaRating getMpaRatingById(int id);
+
     /**
      * Получает список всех рейтингов MPA.
      *
