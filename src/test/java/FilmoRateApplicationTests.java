@@ -12,7 +12,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@JdbcTest // Говорит Spring создать тестовый контекст для работы с БД
+// Говорит Spring создать тестовый контекст для работы с БД
 @AutoConfigureTestDatabase // Конфигурирует тестовую БД вместо основной
 @RequiredArgsConstructor(onConstructor_ = @Autowired) // Создаёт конструктор с @Autowired
 @Import({UserDbStorage.class})// Импортируем класс UserDbStorage в контекст тестирования
