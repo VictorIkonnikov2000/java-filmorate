@@ -26,17 +26,17 @@ public class Film {
    @Positive(message = "Duration must be positive")
    private Integer duration;
 
-   private List<String> genres;
+   private List<Genre> genres;
 
    @NotNull(message = "MPA Rating cannot be null")
    private MpaRating mpa;
 
 
-   public void setGenres(List<String> genres) {
+   public void setGenres(List<Genre> genres) {
       this.genres = (genres != null) ? genres : Collections.emptyList();
    }
 
-   public List<String> getGenres() {
+   public List<Genre> getGenres() {
       return (genres != null) ? genres : Collections.emptyList();
    }
 

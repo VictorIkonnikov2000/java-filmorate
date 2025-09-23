@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.MpaRating;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.GenreStorage;
@@ -12,6 +13,7 @@ import ru.yandex.practicum.filmorate.storage.MpaRatingStorage;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -35,13 +37,30 @@ public class FilmService {
         // Получаем MPA рейтинг из хранилища по id
         MpaRating mpa = mpaRatingStorage.getMpaRatingById(film.getMpa().getId());
         if (mpa == null) {
+            log.error("MpaRating with id {} not found.", film.getMpa().getId());
             throw new NotFoundException("MpaRating with id " + film.getMpa().getId() + " not found.");
         }
         film.setMpa(mpa); // Устанавливаем фильм
+
+        // Обрабатываем жанры
+        if (film.getGenres() != null) { // Проверяем, что жанры вообще переданы
+            List<Genre> genres = film.getGenres().stream()
+                    .map(genre -> {
+                        Genre foundGenre = genreStorage.getGenreById(genre.getId());
+                        if (foundGenre == null) {
+                            log.error("Genre with id {} not found.", genre.getId());
+                            throw new NotFoundException("Genre with id " + genre.getId() + " not found.");
+                        }
+                        return foundGenre;
+                    })
+                    .collect(Collectors.toList());
+            film.setGenres(genres); // Устанавливаем корректные жанры
+        }
         Film createdFilm = filmStorage.createFilm(film);
         log.info("Film created successfully with id: {}", createdFilm.getId());
         return createdFilm;
     }
+
 
     public Film updateFilm(Film film) {
         // Получаем MPA рейтинг из хранилища по id
