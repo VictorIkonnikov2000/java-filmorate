@@ -9,6 +9,8 @@ import ru.yandex.practicum.filmorate.storage.UserStorage;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static ru.yandex.practicum.filmorate.validate.UserValidate.validateUser;
+
 @Service
 public class UserService {
 
@@ -19,16 +21,18 @@ public class UserService {
         this.userStorage = userStorage;
     }
 
-    public ResponseEntity<?> createUser(User user) {
+    public User createUser(User user) {
+        validateUser(user);  // Валидация
         return userStorage.createUser(user);
     }
 
-    public ResponseEntity<?> updateUser(User user) {
-        return userStorage.updateUser(user);
+    public User updateUser(User user) {
+        validateUser(user); //Валидация
+        return userStorage.updateUser(user); //Возвращаем обновленного пользователя
     }
 
-    public ResponseEntity<List<User>> getAllUsers() {
-        return userStorage.getAllUsers();
+    public List<User> getAllUsers() {
+        return userStorage.getAllUsers(); // Возвращаем список всех пользователей
     }
 
     public void addFriend(Long userId, Long friendId) {

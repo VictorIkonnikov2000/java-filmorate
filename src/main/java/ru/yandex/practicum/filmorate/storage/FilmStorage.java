@@ -6,11 +6,11 @@ import ru.yandex.practicum.filmorate.model.Film;
 import java.util.List;
 
 public interface FilmStorage {
-    ResponseEntity<?> createFilm(Film film);
+    Film createFilm(Film film); // Возвращаем созданный фильм
 
-    ResponseEntity<?> updateFilm(Film film);
+    Film updateFilm(Film film); // Возвращаем обновленный фильм
 
-    ResponseEntity<List<Film>> getAllFilms();
+    List<Film> getAllFilms();
 
     void addLike(Long filmId, Long userId);
 

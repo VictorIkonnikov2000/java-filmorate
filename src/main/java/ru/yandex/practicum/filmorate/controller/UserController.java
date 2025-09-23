@@ -25,27 +25,22 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createUser(@RequestBody User user) {
+    @ResponseStatus(HttpStatus.CREATED) // Указываем код 201 Created
+    public User createUser(@RequestBody User user) {
         log.info("Получен запрос POST /users с телом: {}", user);
-        ResponseEntity<?> response = userService.createUser(user);
-        log.info("Ответ на запрос POST /users: {}", response);
-        return response;
+        return userService.createUser(user); //Возвращаем созданного пользователя
     }
 
     @PutMapping
-    public ResponseEntity<?> updateUser(@RequestBody User user) {
+    public User updateUser(@RequestBody User user) {
         log.info("Получен запрос PUT /users с телом: {}", user);
-        ResponseEntity<?> response = userService.updateUser(user);
-        log.info("Ответ на запрос PUT /users: {}", response);
-        return response;
+        return userService.updateUser(user); //Возвращаем обновленного пользователя
     }
 
     @GetMapping
-    public ResponseEntity<List<User>> getAllUsers() {
+    public List<User> getAllUsers() {
         log.info("Получен запрос GET /users");
-        ResponseEntity<List<User>> response = userService.getAllUsers();
-        log.info("Ответ на запрос GET /users: {}", response.getBody());
-        return response;
+        return userService.getAllUsers();//Возвращаем список всех пользователей
     }
 
     @PutMapping("/{id}/friends/{friendId}")

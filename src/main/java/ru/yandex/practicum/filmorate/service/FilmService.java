@@ -22,16 +22,16 @@ public class FilmService {
         this.userStorage = userStorage;
     }
 
-    public ResponseEntity<?> createFilm(Film film) {
-        return filmStorage.createFilm(film);
+    public Film createFilm(Film film) {
+        return filmStorage.createFilm(film); // Возвращаем созданный фильм
     }
 
-    public ResponseEntity<?> updateFilm(Film film) {
-        return filmStorage.updateFilm(film);
+    public Film updateFilm(Film film) {
+        return filmStorage.updateFilm(film); // Возвращаем обновленный фильм
     }
 
-    public ResponseEntity<List<Film>> getAllFilms() {
-        return filmStorage.getAllFilms();
+    public List<Film> getAllFilms() {
+        return filmStorage.getAllFilms(); // Возвращаем список фильмов
     }
 
     public void addLike(Long filmId, Long userId) {

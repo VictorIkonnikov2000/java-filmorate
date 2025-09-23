@@ -28,28 +28,24 @@ public class FilmController {
         this.filmService = filmService;
     }
 
+
     @PostMapping
-    public ResponseEntity<?> createFilm(@RequestBody Film film) {
+    @ResponseStatus(HttpStatus.CREATED)  // Возвращаем 201 Created
+    public Film createFilm(@RequestBody Film film) {
         log.info("Получен запрос POST /films с телом: {}", film);
-        ResponseEntity<?> response = filmService.createFilm(film);
-        log.info("Ответ на запрос POST /films: {}", response);
-        return response;
+        return filmService.createFilm(film);
     }
 
     @PutMapping
-    public ResponseEntity<?> updateFilm(@RequestBody Film film) {
+    public Film updateFilm(@RequestBody Film film) {
         log.info("Получен запрос PUT /films с телом: {}", film);
-        ResponseEntity<?> response = filmService.updateFilm(film);
-        log.info("Ответ на запрос PUT /films: {}", response);
-        return response;
+        return filmService.updateFilm(film);
     }
 
     @GetMapping
-    public ResponseEntity<List<Film>> getAllFilms() {
+    public List<Film> getAllFilms() {
         log.info("Получен запрос GET /films");
-        ResponseEntity<List<Film>> response = filmService.getAllFilms();
-        log.info("Ответ на запрос GET /films: {}", response.getBody());
-        return response;
+        return filmService.getAllFilms();
     }
 
     @GetMapping("/{id}") // Добавлен метод для получения фильма по ID
