@@ -27,6 +27,7 @@ public class Film {
       this.duration = duration;
       this.mpa = mpa;
    }
+
    private static final int MAX_DESCRIPTION_LENGTH = 200;
    private static final LocalDate MIN_RELEASE_DATE = LocalDate.of(1895, 12, 28);
 
