@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
 
@@ -25,10 +26,21 @@ public class FilmController {
 
     @PostMapping
     public ResponseEntity<Film> createFilm(@Valid @RequestBody Film film) {
-        log.info("Received POST request for /films with body: {}", film);
+        log.info("Received POST request for /films");
+        if (film.getName() == null || film.getName().isBlank()) {
+            log.warn("Film name is empty");
+            throw new ValidationException("Film name cannot be empty");
+        }
+        if (film.getDescription().length() > 200) {
+            log.warn("Film description is too long");
+            throw new ValidationException("Film description cannot be longer than 200 characters");
+        }
+        if (film.getDuration() <= 0) {
+            log.warn("Film duration is not positive");
+            throw new ValidationException("Film duration must be positive");
+        }
         Film createdFilm = filmService.createFilm(film);
-        log.info("Film created successfully with id: {}", createdFilm.getId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdFilm);  // Explicitly set status and body
+        return new ResponseEntity<>(createdFilm, HttpStatus.CREATED);
     }
 
     @PutMapping
