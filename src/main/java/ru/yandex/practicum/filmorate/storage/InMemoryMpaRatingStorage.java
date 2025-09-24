@@ -16,9 +16,9 @@ public class InMemoryMpaRatingStorage implements MpaRatingStorage {
         // Инициализация MPA рейтингов.  Исправлено на соответствие типу Long и ratings
         ratings.put(1L, new MpaRating(1L, "G"));
         ratings.put(2L, new MpaRating(2L, "PG"));
-        ratings.put(3L, new MpaRating(3L, "PG13"));
+        ratings.put(3L, new MpaRating(3L, "PG-13"));
         ratings.put(4L, new MpaRating(4L, "R"));
-        ratings.put(5L, new MpaRating(5L, "NC17"));
+        ratings.put(5L, new MpaRating(5L, "NC-17"));
     }
 
     // Убедитесь, что этот метод больше не используется.  Если используется, нужно исправить.
