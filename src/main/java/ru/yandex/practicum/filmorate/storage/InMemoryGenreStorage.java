@@ -4,10 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.model.Genre;
 
-import java.util.List;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @Component
 @Slf4j
@@ -18,12 +15,20 @@ public class InMemoryGenreStorage implements GenreStorage {
 
     public InMemoryGenreStorage() {
         // Инициализация начальными данными (пример)
-        addGenre(new Genre(null, "Комедия"));
-        addGenre(new Genre(null, "Драма"));
-        addGenre(new Genre(null, "Мультфильм"));
-        addGenre(new Genre(null, "Триллер"));
-        addGenre(new Genre(null, "Документальный"));
-        addGenre(new Genre(null, "Боевик"));
+        addInitialGenre(new Genre(null, "Комедия"));
+        addInitialGenre(new Genre(null, "Драма"));
+        addInitialGenre(new Genre(null, "Мультфильм"));
+        addInitialGenre(new Genre(null, "Триллер"));
+        addInitialGenre(new Genre(null, "Документальный"));
+        addInitialGenre(new Genre(null, "Боевик"));
+    }
+
+    //Вспомогательный метод для инициализации
+    private void addInitialGenre(Genre genre) {
+        genre.setId(nextId);
+        genres.put(nextId, new Genre(nextId, genre.getName()));
+        nextId++;
+        log.info("Добавлен новый жанр: {} с ID: {}", genre.getName(), genre.getId());
     }
 
     @Override
@@ -32,9 +37,10 @@ public class InMemoryGenreStorage implements GenreStorage {
     }
 
     @Override
-    public Genre getGenreById(Long id) {
+    public Optional<Genre> getGenreById(Long id) {
         log.debug("Поиск жанра по ID: {}", id);
-        return genres.get(id);
+        Genre genre = genres.get(id);
+        return Optional.ofNullable(genre); // Возвращаем Optional
     }
 
     @Override

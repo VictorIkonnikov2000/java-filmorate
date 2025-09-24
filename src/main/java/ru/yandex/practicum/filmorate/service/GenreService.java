@@ -2,25 +2,31 @@ package ru.yandex.practicum.filmorate.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Genre;
-import ru.yandex.practicum.filmorate.storage.GenreStorage; // Предполагаем, что есть интерфейс GenreStorage
+import ru.yandex.practicum.filmorate.storage.GenreStorage;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class GenreService {
 
-    private final GenreStorage genreStorage; // Поле для доступа к хранилищу жанров
+    private final GenreStorage genreStorage;
 
     public List<Genre> getAllGenres() {
-        // Получает все жанры из хранилища и возвращает их.
         return genreStorage.getAllGenres();
     }
 
     public Genre getGenreById(Long id) {
-        // Получает жанр по ID из хранилища и возвращает его.
-        return genreStorage.getGenreById(id);
+        Optional<Genre> genreOptional = genreStorage.getGenreById(id);
+        if (genreOptional.isPresent()) {
+            return genreOptional.get();
+        } else {
+            throw new NotFoundException("Genre with id=" + id + " not found");
+        }
     }
 }
+
 

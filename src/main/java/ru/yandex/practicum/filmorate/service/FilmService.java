@@ -34,6 +34,7 @@ public class FilmService {
 
     public Film createFilm(Film film) {
         log.info("Creating film: {}", film);
+
         // Получаем MPA рейтинг из хранилища по id
         MpaRating mpa = mpaRatingStorage.getMpaById(film.getMpa().getId());
         if (mpa == null) {
@@ -45,14 +46,11 @@ public class FilmService {
         // Обрабатываем жанры
         if (film.getGenres() != null) { // Проверяем, что жанры вообще переданы
             List<Genre> genres = film.getGenres().stream()
-                    .map(genre -> {
-                        Genre foundGenre = genreStorage.getGenreById(genre.getId());
-                        if (foundGenre == null) {
-                            log.error("Genre with id {} not found.", genre.getId());
-                            throw new NotFoundException("Genre with id " + genre.getId() + " not found.");
-                        }
-                        return foundGenre;
-                    })
+                    .map(genre -> genreStorage.getGenreById(genre.getId())
+                            .orElseThrow(() -> {
+                                log.error("Genre with id {} not found.", genre.getId());
+                                return new NotFoundException("Genre with id " + genre.getId() + " not found.");
+                            }))
                     .collect(Collectors.toList());
             film.setGenres(genres); // Устанавливаем корректные жанры
         }
