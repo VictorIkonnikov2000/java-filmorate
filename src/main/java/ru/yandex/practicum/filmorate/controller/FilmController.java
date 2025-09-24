@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
 
@@ -26,9 +27,14 @@ public class FilmController {
     @PostMapping
     public ResponseEntity<Film> createFilm(@Valid @RequestBody Film film) {
         log.info("Received POST request for /films with body: {}", film);
-        Film createdFilm = filmService.createFilm(film);
-        log.info("Film created successfully with id: {}", createdFilm.getId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdFilm);  // Explicitly set status and body
+        try {
+            Film createdFilm = filmService.createFilm(film);
+            log.info("Film created successfully with id: {}", createdFilm.getId());
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdFilm);  // Explicitly set status and body
+        } catch (ValidationException e) { // Ловим ValidationException
+            log.warn("Film validation failed: {}", e.getMessage()); // Логируем ошибку
+            return ResponseEntity.badRequest().build();  // Возвращаем 400
+        }
     }
 
     @PutMapping
