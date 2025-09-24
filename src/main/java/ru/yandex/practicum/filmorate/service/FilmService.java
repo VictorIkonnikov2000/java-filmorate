@@ -35,7 +35,7 @@ public class FilmService {
     public Film createFilm(Film film) {
         log.info("Creating film: {}", film);
         // Получаем MPA рейтинг из хранилища по id
-        MpaRating mpa = mpaRatingStorage.getMpaRatingById(film.getMpa().getId());
+        MpaRating mpa = mpaRatingStorage.getMpaById(film.getMpa().getId());
         if (mpa == null) {
             log.error("MpaRating with id {} not found.", film.getMpa().getId());
             throw new NotFoundException("MpaRating with id " + film.getMpa().getId() + " not found.");
@@ -64,7 +64,7 @@ public class FilmService {
 
     public Film updateFilm(Film film) {
         // Получаем MPA рейтинг из хранилища по id
-        MpaRating mpa = mpaRatingStorage.getMpaRatingById(film.getMpa().getId());
+        MpaRating mpa = mpaRatingStorage.getMpaById(film.getMpa().getId());
         if (mpa == null) {
             throw new NotFoundException("MpaRating with id " + film.getMpa().getId() + " not found.");
         }

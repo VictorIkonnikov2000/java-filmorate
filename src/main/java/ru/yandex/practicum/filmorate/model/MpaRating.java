@@ -4,10 +4,10 @@ import lombok.Data;
 
 @Data
 public class MpaRating {
-    private int id;
+    private Long id;
     private String name;
 
-    public MpaRating(int id, String name) {
+    public MpaRating(Long id, String name) {
         this.id = id;
         this.name = name;
     }

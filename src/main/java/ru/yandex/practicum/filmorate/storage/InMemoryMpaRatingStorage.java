@@ -8,23 +8,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Component
+@Component // Указываем, что это компонент Spring для автоматического создания экземпляра
 public class InMemoryMpaRatingStorage implements MpaRatingStorage {
-    private final Map<Integer, MpaRating> mpaRatings = new HashMap<>();
     private final Map<Long, MpaRating> ratings = new HashMap<>(); // Хранилище рейтингов в памяти, где ключ - ID
 
     public InMemoryMpaRatingStorage() {
-        // Инициализация MPA рейтингов
-        mpaRatings.put(1, new MpaRating(1, "G"));
-        mpaRatings.put(2, new MpaRating(2, "PG"));
-        mpaRatings.put(3, new MpaRating(3, "PG13"));
-        mpaRatings.put(4, new MpaRating(4, "R"));
-        mpaRatings.put(5, new MpaRating(5, "NC17"));
+        // Инициализация MPA рейтингов.  Исправлено на соответствие типу Long и ratings
+        ratings.put(1L, new MpaRating(1L, "G"));
+        ratings.put(2L, new MpaRating(2L, "PG"));
+        ratings.put(3L, new MpaRating(3L, "PG13"));
+        ratings.put(4L, new MpaRating(4L, "R"));
+        ratings.put(5L, new MpaRating(5L, "NC17"));
     }
 
+    // Убедитесь, что этот метод больше не используется.  Если используется, нужно исправить.
     @Override
     public MpaRating getMpaRatingById(int id) {
-        return mpaRatings.get(id);
+        //  Этот метод устарел, потому что использует int id. Используйте getMpaById(Long id)
+        throw new UnsupportedOperationException("Этот метод устарел. Используйте getMpaById(Long id)");
     }
 
     @Override
@@ -40,4 +41,5 @@ public class InMemoryMpaRatingStorage implements MpaRatingStorage {
     }
 
 }
+
 
