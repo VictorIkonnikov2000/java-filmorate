@@ -41,7 +41,7 @@ public class FilmService {
             log.error("MpaRating with id {} not found.", film.getMpa().getId());
             throw new NotFoundException("MpaRating with id " + film.getMpa().getId() + " not found.");
         }
-        film.setMpa(mpa); // Устанавливаем фильм
+        film.setMpa(mpa);
 
         // Обрабатываем жанры
         if (film.getGenres() != null) { // Проверяем, что жанры вообще переданы
@@ -52,12 +52,18 @@ public class FilmService {
                                 return new NotFoundException("Genre with id " + genre.getId() + " not found.");
                             }))
                     .collect(Collectors.toList());
-            film.setGenres(genres); // Устанавливаем корректные жанры
+
+            // **Удаляем дубликаты жанров**
+            List<Genre> uniqueGenres = genres.stream().distinct().collect(Collectors.toList());
+
+            film.setGenres(uniqueGenres); // Устанавливаем корректные жанры
         }
+
         Film createdFilm = filmStorage.createFilm(film);
         log.info("Film created successfully with id: {}", createdFilm.getId());
         return createdFilm;
     }
+
 
 
     public Film updateFilm(Film film) {
