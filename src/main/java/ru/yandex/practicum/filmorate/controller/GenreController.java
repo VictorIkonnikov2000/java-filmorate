@@ -1,27 +1,40 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.service.GenreService;
-
 
 import java.util.List;
 
 @RestController
-@RequiredArgsConstructor // Создает конструктор с @Autowired для полей, помеченных final
+@RequiredArgsConstructor
+@Slf4j // Добавляем логирование
 public class GenreController {
 
-    private final GenreService genreService; // Сервис для работы с жанрами
+    private final GenreService genreService;
 
     @GetMapping("/genres")
-    public List<Genre> getAllGenres() { // Получаем список всех жанров
-        return genreService.getAllGenres(); // Вызываем метод сервиса для получения списка
+    public List<Genre> getAllGenres() {
+        log.info("Received GET request for /genres");
+        return genreService.getAllGenres();
     }
 
     @GetMapping("/genres/{id}")
-    public Genre getGenreById(@PathVariable Long id) { // Получаем жанр по ID
-        return genreService.getGenreById(id); // Вызываем метод сервиса для получения жанра
+    public ResponseEntity<Genre> getGenreById(@PathVariable Long id) {
+        log.info("Received GET request for /genres/{}", id);
+        try {
+            Genre genre = genreService.getGenreById(id);
+            log.info("Returning genre: {}", genre);
+            return ResponseEntity.ok(genre);
+        } catch (NotFoundException e) {
+            log.warn("Genre not found with id: {}", id);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); // Возвращаем 404
+        }
     }
 }
 
