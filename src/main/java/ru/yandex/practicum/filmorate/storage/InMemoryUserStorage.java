@@ -56,10 +56,9 @@ public class InMemoryUserStorage implements UserStorage {
         if (!users.containsKey(friendId)) {
             throw new NotFoundException("Пользователь с id " + friendId + " не найден.");
         }
-
+        // Теперь дружба односторонняя: добавляем friendId в список друзей userId, не добавляя userId в список friendId.
         friends.computeIfAbsent(userId, k -> new HashSet<>()).add(friendId);
-        friends.computeIfAbsent(friendId, k -> new HashSet<>()).add(userId);
-        log.info("Пользователи {} и {} теперь друзья.", userId, friendId);
+        log.info("Пользователь {} добавил в друзья пользователя {}.", userId, friendId);
     }
 
     @Override
@@ -70,13 +69,11 @@ public class InMemoryUserStorage implements UserStorage {
         if (!users.containsKey(friendId)) {
             throw new NotFoundException("Пользователь с id " + friendId + " не найден.");
         }
+        //Удаляем друга только из списка друзей userId (т.к. дружба односторонняя)
         if (friends.containsKey(userId)) {
             friends.get(userId).remove(friendId);
         }
-        if (friends.containsKey(friendId)) {
-            friends.get(friendId).remove(userId);
-        }
-        log.info("Пользователи {} и {} больше не друзья.", userId, friendId);
+        log.info("Пользователь {} удалил из друзей пользователя {}.", userId, friendId);
     }
 
     @Override
