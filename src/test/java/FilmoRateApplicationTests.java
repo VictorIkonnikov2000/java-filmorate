@@ -3,6 +3,7 @@ import org.junit.jupiter.api.Test; // Подключаем аннотации JU
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase; // Для настройки тестовой базы данных
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest; // Для работы с JDBC в тестах
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.UserDbStorage;
@@ -15,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat; // Для удобны
 @AutoConfigureTestDatabase // Конфигурирует тестовую БД вместо основной
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 @Import({UserDbStorage.class})
+@SpringBootTest
 class FilmoRateApplicationTests {
 
     private final UserDbStorage userStorage;
