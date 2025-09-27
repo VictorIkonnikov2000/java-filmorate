@@ -7,7 +7,7 @@ import java.time.LocalDate;
 
 public class UserValidate {
 
-    public static void validateUser(User user) {
+    public static boolean validateUser(User user) {
 
         if (user.getEmail() == null || user.getEmail().isEmpty() || !user.getEmail().contains("@")) {
             throw new ValidationException("Электронная почта должна быть указана и содержать символ @.");
@@ -27,6 +27,7 @@ public class UserValidate {
         if (user.getBirthday() != null && user.getBirthday().isAfter(LocalDate.now())) {
             throw new ValidationException("Дата рождения не может быть в будущем.");
         }
+        return false;
     }
 }
 

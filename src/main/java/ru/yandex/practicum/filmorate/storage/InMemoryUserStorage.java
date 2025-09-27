@@ -1,11 +1,9 @@
 package ru.yandex.practicum.filmorate.storage;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.validate.UserValidate;
 
@@ -14,6 +12,7 @@ import java.util.stream.Collectors;
 
 @Component
 @Slf4j
+@Primary
 public class InMemoryUserStorage implements UserStorage {
 
     private final Map<Long, User> users = new HashMap<>();
@@ -22,46 +21,30 @@ public class InMemoryUserStorage implements UserStorage {
 
 
     @Override
-    public ResponseEntity<?> createUser(User user) {
-        try {
-            UserValidate.validateUser(user);
-            user.setId(userIdCounter++);
-            users.put(user.getId(), user);
-            log.info("Создан пользователь: {}", user);
-            return new ResponseEntity<>(user, HttpStatus.CREATED);
-        } catch (ValidationException e) {
-            log.error("Ошибка валидации при создании пользователя: {}", e.getMessage());
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", e.getMessage());
-            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
-        }
+    public User createUser(User user) {
+        UserValidate.validateUser(user); // Валидация пользователя
+        user.setId(userIdCounter++); // Присваиваем id
+        users.put(user.getId(), user); // Сохраняем пользователя
+        log.info("Создан пользователь: {}", user);
+        return user; // Возвращаем созданного пользователя
     }
 
     @Override
-    public ResponseEntity<?> updateUser(User user) {
-        try {
-            UserValidate.validateUser(user);
-            if (!users.containsKey(user.getId())) {
-                log.warn("Пользователь с id {} не найден.", user.getId());
-                Map<String, String> errorResponse = new HashMap<>();
-                errorResponse.put("error", "Пользователь не найден");
-                return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
-            }
-            users.put(user.getId(), user);
-            log.info("Обновляем пользователя: {}", user);
-            return new ResponseEntity<>(user, HttpStatus.OK);
-        } catch (ValidationException e) {
-            log.error("Ошибка валидации при обновлении пользователя: {}", e.getMessage());
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", e.getMessage());
-            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    public User updateUser(User user) {
+        UserValidate.validateUser(user); // Валидация пользователя
+        if (!users.containsKey(user.getId())) {
+            log.warn("Пользователь с id {} не найден.", user.getId());
+            throw new NotFoundException("Пользователь не найден"); // Ошибка, если пользователя нет
         }
+        users.put(user.getId(), user); // Обновляем пользователя
+        log.info("Обновляем пользователя: {}", user);
+        return user; // Возвращаем обновленного пользователя
     }
 
     @Override
-    public ResponseEntity<List<User>> getAllUsers() {
+    public List<User> getAllUsers() {
         log.info("Запрос на получение списка всех пользователей.");
-        return new ResponseEntity<>(new ArrayList<>(users.values()), HttpStatus.OK);
+        return new ArrayList<>(users.values()); // Возвращаем список всех пользователей
     }
 
 
@@ -73,10 +56,9 @@ public class InMemoryUserStorage implements UserStorage {
         if (!users.containsKey(friendId)) {
             throw new NotFoundException("Пользователь с id " + friendId + " не найден.");
         }
-
+        // Теперь дружба односторонняя: добавляем friendId в список друзей userId, не добавляя userId в список friendId.
         friends.computeIfAbsent(userId, k -> new HashSet<>()).add(friendId);
-        friends.computeIfAbsent(friendId, k -> new HashSet<>()).add(userId);
-        log.info("Пользователи {} и {} теперь друзья.", userId, friendId);
+        log.info("Пользователь {} добавил в друзья пользователя {}.", userId, friendId);
     }
 
     @Override
@@ -87,13 +69,11 @@ public class InMemoryUserStorage implements UserStorage {
         if (!users.containsKey(friendId)) {
             throw new NotFoundException("Пользователь с id " + friendId + " не найден.");
         }
+        //Удаляем друга только из списка друзей userId (т.к. дружба односторонняя)
         if (friends.containsKey(userId)) {
             friends.get(userId).remove(friendId);
         }
-        if (friends.containsKey(friendId)) {
-            friends.get(friendId).remove(userId);
-        }
-        log.info("Пользователи {} и {} больше не друзья.", userId, friendId);
+        log.info("Пользователь {} удалил из друзей пользователя {}.", userId, friendId);
     }
 
     @Override
