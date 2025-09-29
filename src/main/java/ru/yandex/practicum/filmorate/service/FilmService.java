@@ -1,7 +1,7 @@
 package ru.yandex.practicum.filmorate.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
@@ -17,88 +17,72 @@ import java.util.stream.Collectors;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class FilmService {
 
     private final FilmStorage filmStorage;
     private final UserStorage userStorage;
-    private final GenreStorage genreStorage; // Добавлено
+    private final GenreStorage genreStorage;
     private final MpaRatingStorage mpaRatingStorage;
 
-    @Autowired
-    public FilmService(FilmStorage filmStorage, UserStorage userStorage, GenreStorage genreStorage, MpaRatingStorage mpaRatingStorage) {
-        this.filmStorage = filmStorage;
-        this.userStorage = userStorage;
-        this.genreStorage = genreStorage;
-        this.mpaRatingStorage = mpaRatingStorage;
-    }
-
     public Film createFilm(Film film) {
-        log.info("Creating film: {}", film);
+        // Логируем создание фильма
+        log.info("Film create: {}", film);
 
-        // Получаем MPA рейтинг из хранилища по id
+        // Получаем MPA рейтинг, валидируем
         MpaRating mpa = mpaRatingStorage.getMpaById(film.getMpa().getId());
         if (mpa == null) {
-            log.error("MpaRating with id {} not found.", film.getMpa().getId());
-            throw new NotFoundException("MpaRating with id " + film.getMpa().getId() + " not found.");
+            throw new NotFoundException("MpaRating not found " + film.getMpa().getId());
         }
         film.setMpa(mpa);
 
-        // Обрабатываем жанры
-        if (film.getGenres() != null) { // Проверяем, что жанры вообще переданы
+        // Валидируем жанры + исключаем дубликаты
+        if (film.getGenres() != null) {
             List<Genre> genres = film.getGenres().stream()
+                    .distinct() // <- Удаляем дубликаты тут
                     .map(genre -> genreStorage.getGenreById(genre.getId())
-                            .orElseThrow(() -> {
-                                log.error("Genre with id {} not found.", genre.getId());
-                                return new NotFoundException("Genre with id " + genre.getId() + " not found.");
-                            }))
+                            .orElseThrow(() -> new NotFoundException("Genre not found " + genre.getId())))
                     .collect(Collectors.toList());
 
-            // **Удаляем дубликаты жанров**
-            List<Genre> uniqueGenres = genres.stream().distinct().collect(Collectors.toList());
-
-            film.setGenres(uniqueGenres); // Устанавливаем корректные жанры
+            film.setGenres(genres);
         }
 
-        Film createdFilm = filmStorage.createFilm(film);
-        log.info("Film created successfully with id: {}", createdFilm.getId());
-        return createdFilm;
+        return filmStorage.createFilm(film);
     }
 
-
-
     public Film updateFilm(Film film) {
-        // Получаем MPA рейтинг из хранилища по id
+
         MpaRating mpa = mpaRatingStorage.getMpaById(film.getMpa().getId());
         if (mpa == null) {
-            throw new NotFoundException("MpaRating with id " + film.getMpa().getId() + " not found.");
+            throw new NotFoundException("MpaRating not found " + film.getMpa().getId());
         }
-        film.setMpa(mpa); // Устанавливаем фильм
-        return filmStorage.updateFilm(film); // Возвращаем обновленный фильм
+        film.setMpa(mpa);
+
+        return filmStorage.updateFilm(film);
     }
 
     public List<Film> getAllFilms() {
-        return filmStorage.getAllFilms(); // Возвращаем список фильмов
+        return filmStorage.getAllFilms();
     }
 
     public void addLike(Long filmId, Long userId) {
 
         if (filmStorage.getFilmById(filmId) == null) {
-            throw new NotFoundException("Film with id " + filmId + " not found.");
+            throw new NotFoundException("Film not found " + filmId);
         }
         if (userStorage.getUserById(userId) == null) {
-            throw new NotFoundException("User with id " + userId + " not found.");
+            throw new NotFoundException("User not found " + userId);
         }
-
         filmStorage.addLike(filmId, userId);
     }
 
     public void removeLike(Long filmId, Long userId) {
-        // Check if film and user exist
+
         if (filmStorage.getFilmById(filmId) == null) {
-            throw new NotFoundException("Film with id " + filmId + " not found.");
+            throw new NotFoundException("Film not found " + filmId);
         }
-        if (userStorage.getUserById(userId) == null) { // Using UserStorage
-            throw new NotFoundException("User with id " + userId + " not found.");
+        if (userStorage.getUserById(userId) == null) {
+            throw new NotFoundException("User not found " + userId);
         }
         filmStorage.removeLike(filmId, userId);
     }
@@ -111,6 +95,8 @@ public class FilmService {
         return filmStorage.getFilmById(id);
     }
 }
+
+
 
 
 
