@@ -61,18 +61,25 @@ public class InMemoryUserStorage implements UserStorage {
     }
 
     @Override
-    public void removeFriend(Long userId, Long friendId) {
+    public boolean removeFriend(Long userId, Long friendId) {
+        // Проверяем существование пользователя, который удаляет друга
         if (!users.containsKey(userId)) {
             throw new NotFoundException("Пользователь с id " + userId + " не найден.");
         }
+        // Проверяем существование пользователя, которого удаляют из друзей
         if (!users.containsKey(friendId)) {
             throw new NotFoundException("Пользователь с id " + friendId + " не найден.");
         }
-        //Удаляем друга только из списка друзей userId (т.к. дружба односторонняя)
+        // Удаляем друга только из списка друзей userId.
+        // Метод remove вернет true, если элемент был успешно удален, и false, если его не было.
+        boolean removed = false;
         if (friends.containsKey(userId)) {
-            friends.get(userId).remove(friendId);
+            removed = friends.get(userId).remove(friendId);
         }
-        log.info("Пользователь {} удалил из друзей пользователя {}.", userId, friendId);
+        // Логируем действие
+        log.info("Пользователь {} удалил из друзей пользователя {}. Успешно: {}", userId, friendId, removed);
+        // Возвращаем результат операции удаления
+        return removed;
     }
 
     @Override

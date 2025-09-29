@@ -15,15 +15,15 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.util.List;
 import java.util.Objects;
-// Добавим логгер для вывода информации об ошибке, если нужно
-// import org.slf4j.Logger;
-// import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 @Component("UserDbStorage")
 public class UserDbStorage implements UserStorage {
 
     private final JdbcTemplate jdbcTemplate;
-    // private static final Logger log = LoggerFactory.getLogger(UserDbStorage.class); // Инициализация логгера
+    private static final Logger log = LoggerFactory.getLogger(UserDbStorage.class); // Инициализация логгера
 
     @Autowired
     public UserDbStorage(JdbcTemplate jdbcTemplate) {
@@ -86,22 +86,47 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public void addFriend(Long userId, Long friendId) {
-        if (userId.equals(friendId)) {
-            throw new ValidationException("Cannot add self as friend.");
-        }
-        getUserById(userId);
-        getUserById(friendId);
+        String checkFriendshipSql = "SELECT COUNT(*) FROM user_friends WHERE user_id = ? AND friend_id = ?";
+        Integer existingFriendshipCount = jdbcTemplate.queryForObject(checkFriendshipSql, Integer.class, userId, friendId);
 
-        String sql = "INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, false)";
-        jdbcTemplate.update(sql, userId, friendId);
+        // Добавляем дружбу, только если её ещё нет
+        if (existingFriendshipCount != null && existingFriendshipCount == 0) {
+            String insertFriendshipSql = "INSERT INTO user_friends (user_id, friend_id) VALUES (?, ?)";
+            jdbcTemplate.update(insertFriendshipSql, userId, friendId);
+            log.debug("Пользователь {} добавил пользователя {} в друзья.", userId, friendId);
+        } else {
+            log.debug("Дружба между {} и {} уже существует.", userId, friendId);
+        }
+
+        // Обеспечиваем симметричность: добавляем обратную дружбу, если её нет
+        Integer existingReciprocalFriendshipCount = jdbcTemplate.queryForObject(checkFriendshipSql, Integer.class, friendId, userId);
+        if (existingReciprocalFriendshipCount != null && existingReciprocalFriendshipCount == 0) {
+            String insertReciprocalFriendshipSql = "INSERT INTO user_friends (user_id, friend_id) VALUES (?, ?)";
+            jdbcTemplate.update(insertReciprocalFriendshipSql, friendId, userId);
+            log.debug("Пользователь {} добавил пользователя {} в друзья (обратная связь).", friendId, userId);
+        } else {
+            log.debug("Обратная дружба между {} и {} уже существует.", friendId, userId);
+        }
     }
 
     @Override
-    public void removeFriend(Long userId, Long friendId) {
-        String sql = "DELETE FROM friends WHERE user_id = ? AND friend_id = ?";
-        int rowsAffected = jdbcTemplate.update(sql, userId, friendId);
-        if (rowsAffected == 0) {
-            throw new NotFoundException("Friendship not found or already removed.");
+    public boolean removeFriend(Long userId, Long friendId) {
+        // Удаляем дружбу в одном направлении
+        String deleteFriendshipSql = "DELETE FROM user_friends WHERE user_id = ? AND friend_id = ?";
+        int deletedRows1 = jdbcTemplate.update(deleteFriendshipSql, userId, friendId);
+
+        // Удаляем дружбу в обратном направлении для симметрии
+        String deleteReciprocalFriendshipSql = "DELETE FROM user_friends WHERE user_id = ? AND friend_id = ?";
+        int deletedRows2 = jdbcTemplate.update(deleteReciprocalFriendshipSql, friendId, userId);
+
+        // Если хотя бы одна запись была удалена (или обе), считаем операцию успешной
+        // Это также покроет случай, если дружба была только в одну сторону
+        if (deletedRows1 > 0 || deletedRows2 > 0) {
+            log.debug("Дружба между пользователем {} и пользователем {} удалена.", userId, friendId);
+            return true;
+        } else {
+            log.warn("Попытка удалить несуществующую дружбу между {} и {}.", userId, friendId);
+            return false;
         }
     }
 
