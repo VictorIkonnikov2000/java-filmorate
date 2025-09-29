@@ -1,35 +1,13 @@
+// Пример data.sql для заполнения базы данных тестовыми данными
+INSERT INTO mpa (mpa_id, name) VALUES (1, 'G');
+INSERT INTO mpa (mpa_id, name) VALUES (2, 'PG');
+INSERT INTO mpa (mpa_id, name) VALUES (3, 'PG-13');
+INSERT INTO mpa (mpa_id, name) VALUES (4, 'R');
+INSERT INTO mpa (mpa_id, name) VALUES (5, 'NC-17');
 
--- Добавление MPA рейтингов
-INSERT INTO mpa (name) VALUES ('G')
-ON CONFLICT (name) DO NOTHING;
-
-INSERT INTO mpa (name) VALUES ('PG')
-ON CONFLICT (name) DO NOTHING;
-
-INSERT INTO mpa (name) VALUES ('PG-13')
-ON CONFLICT (name) DO NOTHING;
-
-INSERT INTO mpa (name) VALUES ('R')
-ON CONFLICT (name) DO NOTHING;
-
-INSERT INTO mpa (name) VALUES ('NC-17')
-ON CONFLICT (name) DO NOTHING;
-
--- Добавление Жанров
-INSERT INTO genres (name) VALUES ('Комедия')
-ON CONFLICT (name) DO NOTHING;
-
-INSERT INTO genres (name) VALUES ('Драма')
-ON CONFLICT (name) DO NOTHING;
-
-INSERT INTO genres (name) VALUES ('Мультфильм')
-ON CONFLICT (name) DO NOTHING;
-
-INSERT INTO genres (name) VALUES ('Триллер')
-ON CONFLICT (name) DO NOTHING;
-
-INSERT INTO genres (name) VALUES ('Документальный')
-ON CONFLICT (name) DO NOTHING;
-
-INSERT INTO genres (name) VALUES ('Боевик')
-ON CONFLICT (name) DO NOTHING;
+INSERT INTO genre (genre_id, name) VALUES (1, 'Комедия');
+INSERT INTO genre (genre_id, name) VALUES (2, 'Драма');
+INSERT INTO genre (genre_id, name) VALUES (3, 'Мультфильм');
+INSERT INTO genre (genre_id, name) VALUES (4, 'Триллер');
+INSERT INTO genre (genre_id, name) VALUES (5, 'Боевик');
+INSERT INTO genre (genre_id, name) VALUES (6, 'Детектив');
