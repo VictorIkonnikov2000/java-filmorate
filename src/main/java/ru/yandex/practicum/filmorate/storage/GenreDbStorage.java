@@ -23,39 +23,48 @@ public class GenreDbStorage implements GenreStorage {
     @Override
     public List<Genre> getAllGenres() {
         String sql = "SELECT genre_id, name FROM genres";
-        return jdbcTemplate.query(sql, genreRowMapper()); // Используем RowMapper для преобразования строк БД в объекты Genre
+        return jdbcTemplate.query(sql, genreRowMapper());
     }
 
     @Override
     public Optional<Genre> getGenreById(Long id) {
         String sql = "SELECT genre_id, name FROM genres WHERE genre_id = ?";
         try {
-            Genre genre = jdbcTemplate.queryForObject(sql, genreRowMapper(), id); // Получаем один объект
+            Genre genre = jdbcTemplate.queryForObject(sql, genreRowMapper(), id);
             return Optional.ofNullable(genre);
         } catch (EmptyResultDataAccessException e) {
-            return Optional.empty(); // Если жанр не найден, возвращаем пустой Optional
+            return Optional.empty();
         }
     }
 
 
     private RowMapper<Genre> genreRowMapper() {
-        return (rs, rowNum) -> new Genre(rs.getLong("genre_id"), rs.getString("name")); // Используем конструктор, требующий id и name
+        return (rs, rowNum) -> new Genre(rs.getLong("genre_id"), rs.getString("name"));
     }
 
     @Override
     public Genre addGenre(Genre genre) {
-        //TODO: implementation
-        return null;
+        String sql = "INSERT INTO genres (name) VALUES (?)";
+        jdbcTemplate.update(sql, genre.getName());
+        // Получаем id добавленной записи. В данном случае для простоты полагаем, что id генерируется последовательно
+        Long id = jdbcTemplate.queryForObject("SELECT MAX(genre_id) FROM genres", Long.class);
+        genre.setId(id);
+        return genre;
     }
 
     @Override
     public Genre updateGenre(Genre genre) {
-        //TODO: implementation
-        return null;
+        String sql = "UPDATE genres SET name = ? WHERE genre_id = ?";
+        int rowsAffected = jdbcTemplate.update(sql, genre.getName(), genre.getId());
+        if (rowsAffected == 0) {
+            return null; // жанр не найден
+        }
+        return genre;
     }
 
     @Override
     public void deleteGenre(Long id) {
-        //TODO: implementation
+        String sql =  "DELETE FROM genres WHERE genre_id = ?";
+        jdbcTemplate.update(sql, id);
     }
 }
