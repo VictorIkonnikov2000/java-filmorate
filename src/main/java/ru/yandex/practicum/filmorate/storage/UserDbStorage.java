@@ -73,12 +73,31 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public void addFriend(Long userId, Long friendId) {
-        jdbcTemplate.update("INSERT INTO friends (user1_id, user2_id, status)values (?, ?, ?)", userId, friendId, true);
+        if (userId.equals(friendId)) {
+            throw new ValidationException("Cannot add self as friend.");
+        }
+        // 1. Проверяем существование обоих пользователей
+        // getUserById уже выбрасывает NotFoundException, если пользователь не найден.
+        getUserById(userId);
+        getUserById(friendId);
+
+        String sql = "INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, false)";
+        jdbcTemplate.update(sql, userId, friendId);
     }
 
+
+
     @Override
-    public void removeFriend(Long  userId, Long friendId) {
-        jdbcTemplate.update("DELETE FROM friends WHERE user1_id = ? AND user2_id = ?", userId, friendId);
+    public void removeFriend(Long userId, Long friendId) {
+        getUserById(userId);
+        getUserById(friendId);
+
+        String sql = "DELETE FROM friends WHERE user_id = ? AND friend_id = ?";
+        int rowsAffected = jdbcTemplate.update(sql, userId, friendId);
+
+        if (rowsAffected == 0) {
+            throw new NotFoundException("Friendship between user " + userId + " and user " + friendId + " not found.");
+        }
     }
 
     @Override
