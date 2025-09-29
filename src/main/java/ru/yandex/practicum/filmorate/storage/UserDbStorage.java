@@ -1,9 +1,6 @@
-
-
 package ru.yandex.practicum.filmorate.storage;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataRetrievalFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -13,45 +10,34 @@ import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.validate.UserValidate; // Убедитесь, что этот класс корректно валидирует
+import ru.yandex.practicum.filmorate.validate.UserValidate;
 
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.util.List;
-import java.util.Objects; // Для работы с GeneratedKeyHolder
+import java.util.Objects;
 
 @Slf4j
-@Component("UserDbStorage") // Убедитесь, что бин называется "UserDbStorage"
+@Component("UserDbStorage")
 public class UserDbStorage implements UserStorage {
 
     private final JdbcTemplate jdbcTemplate;
 
-    @Autowired
     public UserDbStorage(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
     public User createUser(User user) {
-        // Проверка валидности пользователя перед добавлением в базу данных
-        // Эта часть критична для первого набора ошибок.
-        // Убедитесь, что UserValidate.validateUser корректно обрабатывает входные данные из тестов.
-        if (!UserValidate.validateUser(user)) {
-            // Если валидация не пройдена, выбрасываем исключение
-            throw new ValidationException("User validation failed");
-        }
-
-        // Если имя пользователя не задано, используем логин в качестве имени
+        UserValidate.validateUser(user);
         if (user.getName() == null || user.getName().isEmpty()) {
             user.setName(user.getLogin());
         }
 
-        // Для получения сгенерированного id используем KeyHolder
         KeyHolder keyHolder = new GeneratedKeyHolder();
-
         String sql = "INSERT INTO users (email, login, name, birthday) VALUES (?, ?, ?, ?)";
         jdbcTemplate.update(connection -> {
-            PreparedStatement ps = connection.prepareStatement(sql, new String[]{"user_id"}); // Указываем, что ожидаем сгенерированный "user_id"
+            PreparedStatement ps = connection.prepareStatement(sql, new String[]{"user_id"});
             ps.setString(1, user.getEmail());
             ps.setString(2, user.getLogin());
             ps.setString(3, user.getName());
@@ -59,36 +45,23 @@ public class UserDbStorage implements UserStorage {
             return ps;
         }, keyHolder);
 
-        // Получаем сгенерированный ID и устанавливаем его для объекта пользователя
-        Long generatedId = Objects.requireNonNull(keyHolder.getKey()).longValue();
-        user.setId(generatedId);
-
-        return user; // Возвращаем пользователя с присвоенным ID
+        user.setId(Objects.requireNonNull(keyHolder.getKey()).longValue());
+        return user;
     }
 
     @Override
     public User updateUser(User user) {
-        // Также необходимо убедиться, что пользователь валиден при обновлении
-        if (!UserValidate.validateUser(user)) {
-            throw new ValidationException("User validation failed");
-        }
-        // Если имя пользователя не задано, используем логин в качестве имени
+        UserValidate.validateUser(user);
         if (user.getName() == null || user.getName().isEmpty()) {
             user.setName(user.getLogin());
         }
 
-        // Проверяем, существует ли пользователь перед обновлением
-        // Если user.getId() null, это может привести к ошибке.
-        // Убедитесь, что объект пользователя, переданный сюда, имеет id.
-        if (user.getId() == null) {
-            throw new ValidationException("User ID is required for update operation");
+        if (getUserById(user.getId()) == null) { // Проверка наличия пользователя через getUserById
+            throw new NotFoundException("User not found for update with id: " + user.getId());
         }
+
         String sql = "UPDATE users SET email = ?, login = ?, name = ?, birthday = ? WHERE user_id = ?";
         int rows = jdbcTemplate.update(sql, user.getEmail(), user.getLogin(), user.getName(), Date.valueOf(user.getBirthday()), user.getId());
-        if (rows == 0) {
-            // Если ни одна строка не была обновлена, значит пользователь не найден
-            throw new NotFoundException("User not found");
-        }
         return user;
     }
 
@@ -103,41 +76,25 @@ public class UserDbStorage implements UserStorage {
         if (userId.equals(friendId)) {
             throw new ValidationException("Cannot add self as friend.");
         }
-
         // 1. Проверяем существование обоих пользователей
         // getUserById уже выбрасывает NotFoundException, если пользователь не найден.
         getUserById(userId);
         getUserById(friendId);
 
-        // 2. Проверяем, существует ли уже дружба, чтобы избежать дубликатов
-        String checkSql = "SELECT COUNT(*) FROM friends WHERE user_id = ? AND friend_id = ?";
-        Integer count = jdbcTemplate.queryForObject(checkSql, Integer.class, userId, friendId);
-        if (count != null && count > 0) {
-            log.info("Friendship between user {} and user {} already exists.", userId, friendId);
-            return; // Если дружба уже есть, просто выходим.
-        }
-
-        // 3. Создаем дружбу (однонаправленную)
         String sql = "INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, false)";
         jdbcTemplate.update(sql, userId, friendId);
     }
 
 
+
     @Override
     public void removeFriend(Long userId, Long friendId) {
-        // 1. Проверяем существование обоих пользователей.
-        // Это важно, чтобы гарантировать, что NotFoundException выбрасывается
-        // в случае, если один из пользователей не существует.
-        // Это соответствует ожиданию 404 для несуществующих ресурсов (пользователей).
         getUserById(userId);
         getUserById(friendId);
 
-        // 2. Пытаемся удалить дружбу.
         String sql = "DELETE FROM friends WHERE user_id = ? AND friend_id = ?";
         int rowsAffected = jdbcTemplate.update(sql, userId, friendId);
 
-        // 3. Если ни одна строка не была затронута, значит, такой дружбы не существовало.
-        // В этом случае выбрасываем NotFoundException, что должно быть обработано контроллером как 404.
         if (rowsAffected == 0) {
             throw new NotFoundException("Friendship between user " + userId + " and user " + friendId + " not found.");
         }
@@ -145,9 +102,7 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public List<User> getFriends(Long userId) {
-        // Проверка, что пользователь существует
-        getUserById(userId); // Выбросит NotFoundException если нет
-
+        getUserById(userId);
         String sql = "SELECT u.user_id, u.email, u.login, u.name, u.birthday FROM users u " +
                 "JOIN friends f ON u.user_id = f.friend_id WHERE f.user_id = ?";
         return jdbcTemplate.query(sql, userRowMapper(), userId);
@@ -155,7 +110,6 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public List<User> getCommonFriends(Long userId, Long otherId) {
-        // Проверка, что оба пользователя существуют
         getUserById(userId);
         getUserById(otherId);
 
@@ -171,13 +125,6 @@ public class UserDbStorage implements UserStorage {
         try {
             return jdbcTemplate.queryForObject(sql, userRowMapper(), id);
         } catch (DataRetrievalFailureException e) {
-            // DataRetrievalFailureException является родительским классом для IncorrectResultSizeDataAccessException.
-            // Поэтому достаточно перехватить только DataRetrievalFailureException, чтобы обработать
-            // случаи, когда пользователь не найден (0 результатов) или найдено более одной записи.
-            // При использовании queryForObject, если найдено 0 или >1 записей, выбрасывается IncorrectResultSizeDataAccessException,
-            // который наследуется от DataRetrievalFailureException.
-
-            // Логгирование ошибки будет полезно для отладки
             log.warn("User with id {} not found or multiple users found for ID. Details: {}", id, e.getMessage());
             throw new NotFoundException("User not found with id: " + id);
         }
@@ -189,9 +136,10 @@ public class UserDbStorage implements UserStorage {
                 .email(rs.getString("email"))
                 .login(rs.getString("login"))
                 .name(rs.getString("name"))
-                .birthday(rs.getDate("birthday") != null ? rs.getDate("birthday").toLocalDate() : null) // Обработка null даты
+                .birthday(rs.getDate("birthday") != null ? rs.getDate("birthday").toLocalDate() : null)
                 .build();
     }
 }
+
 
 
