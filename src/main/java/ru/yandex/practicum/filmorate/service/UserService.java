@@ -10,9 +10,6 @@ import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.util.List;
-import java.util.Objects; // Для future-proofing, хотя stream.filter(Objects::nonNull) в getCommonFriends можно удалить
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import static ru.yandex.practicum.filmorate.validate.UserValidate.validateUser;
 
