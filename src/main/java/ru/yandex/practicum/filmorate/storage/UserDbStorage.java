@@ -114,11 +114,19 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public void removeFriend(Long userId, Long friendId) {
+        // Добавляем явные проверки на существование пользователей
+        // Это гарантирует, что 404 будет выброшен, если какого-либо пользователя не существует.
+        // Если эти проверки уже есть в тестах, то это может быть избыточно,
+        // но делает метод более надежным.
+        getUserById(userId);
+        getUserById(friendId);
+
         String sql = "DELETE FROM friends WHERE user_id = ? AND friend_id = ?";
         int rowsAffected = jdbcTemplate.update(sql, userId, friendId);
         if (rowsAffected == 0) {
-            // Если ничего не удалено, значит не было такой дружбы
-            throw new NotFoundException("Friendship not found or already removed.");
+            // Если ни одна строка не была затронута, это означает, что такой дружбы не существовало
+            // Это соответствует ожиданию 404 'Not Found' для дружбы
+            throw new NotFoundException("Friendship between user " + userId + " and user " + friendId + " not found.");
         }
     }
 
