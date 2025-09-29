@@ -58,16 +58,21 @@ public class UserController {
         return userService.getAllUsers();//Возвращаем список всех пользователей
     }
 
+
     @PutMapping("/{id}/friends/{friendId}")
     public ResponseEntity<?> addFriend(@PathVariable Long id, @PathVariable Long friendId) {
         log.info("Получен запрос PUT /users/{}/friends/{}", id, friendId);
         try {
             userService.addFriend(id, friendId);
             log.info("Пользователи {} и {} добавлены в друзья.", id, friendId);
-            return ResponseEntity.status(HttpStatus.OK).build();
+            // Возвращаем 204 No Content, так как операция успешна и не возвращает тело.
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
         } catch (NotFoundException e) {
             log.warn("Пользователь с id {} или {} не найден.", id, friendId);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом
+        } catch (ValidationException e) { // Добавляем обработку ValidationException
+            log.warn("Ошибка валидации при добавлении в друзья: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -77,7 +82,8 @@ public class UserController {
         try {
             userService.removeFriend(id, friendId);
             log.info("Пользователи {} и {} удалены из друзей.", id, friendId);
-            return ResponseEntity.status(HttpStatus.OK).build();
+            // Возвращаем 204 No Content, так как операция успешна и не возвращает тело.
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
         } catch (NotFoundException e) {
             log.warn("Пользователь с id {} или {} не найден.", id, friendId);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом
