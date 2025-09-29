@@ -44,5 +44,6 @@ public interface GenreStorage {
      * @param id ID удаляемого жанра.
      */
     void deleteGenre(Long id);
+
     List<Genre> getGenresByIds(Collection<Long> genreIds);
 }

@@ -72,4 +72,9 @@ public class InMemoryGenreStorage implements GenreStorage {
             // Можно выбрасывать исключение, если требуется
         }
     }
+
+    @Override
+    public List<Genre> getGenresByIds(Collection<Long> genreIds) {
+        return List.of();
+    }
 }
