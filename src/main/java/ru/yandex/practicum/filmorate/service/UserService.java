@@ -1,7 +1,6 @@
 package ru.yandex.practicum.filmorate.service;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.model.User;
@@ -18,7 +17,7 @@ public class UserService {
 
     private final @Qualifier("UserDbStorage") UserStorage userStorage;
 
-   
+
 
     public User createUser(User user) {
         validateUser(user);  // Валидация
