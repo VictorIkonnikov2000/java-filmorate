@@ -88,7 +88,7 @@ public class UserDbStorage implements UserStorage {
         String sql = "SELECT user_id, email, login, name, birthday FROM users WHERE user_id = ?";
         try {
             return jdbcTemplate.queryForObject(sql, userRowMapper(), id);
-        }catch (org.springframework.dao.EmptyResultDataAccessException e){
+        } catch (org.springframework.dao.EmptyResultDataAccessException e) {
             throw new NotFoundException("User not found");
         }
     }

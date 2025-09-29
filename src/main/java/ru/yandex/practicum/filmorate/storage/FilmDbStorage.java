@@ -40,7 +40,7 @@ public class FilmDbStorage implements FilmStorage {
 
         //Проверка, что filmIdList не пустой и берем первый id
         Long filmId = filmIdList.stream().findFirst().orElse(null);
-        if (filmId != null){
+        if (filmId != null) {
             film.setId(filmId);
             return film;
         } else {
