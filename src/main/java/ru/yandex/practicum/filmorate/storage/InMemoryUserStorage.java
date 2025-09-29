@@ -9,9 +9,8 @@ import ru.yandex.practicum.filmorate.validate.UserValidate;
 import java.util.*;
 import java.util.stream.Collectors;
 
-
-@Slf4j
 @Component("InMemoryUserStorage")
+@Slf4j
 public class InMemoryUserStorage implements UserStorage {
 
     private final Map<Long, User> users = new HashMap<>();
@@ -61,25 +60,18 @@ public class InMemoryUserStorage implements UserStorage {
     }
 
     @Override
-    public boolean removeFriend(Long userId, Long friendId) {
-        // Проверяем существование пользователя, который удаляет друга
+    public void removeFriend(Long userId, Long friendId) {
         if (!users.containsKey(userId)) {
             throw new NotFoundException("Пользователь с id " + userId + " не найден.");
         }
-        // Проверяем существование пользователя, которого удаляют из друзей
         if (!users.containsKey(friendId)) {
             throw new NotFoundException("Пользователь с id " + friendId + " не найден.");
         }
-        // Удаляем друга только из списка друзей userId.
-        // Метод remove вернет true, если элемент был успешно удален, и false, если его не было.
-        boolean removed = false;
+        //Удаляем друга только из списка друзей userId (т.к. дружба односторонняя)
         if (friends.containsKey(userId)) {
-            removed = friends.get(userId).remove(friendId);
+            friends.get(userId).remove(friendId);
         }
-        // Логируем действие
-        log.info("Пользователь {} удалил из друзей пользователя {}. Успешно: {}", userId, friendId, removed);
-        // Возвращаем результат операции удаления
-        return removed;
+        log.info("Пользователь {} удалил из друзей пользователя {}.", userId, friendId);
     }
 
     @Override
