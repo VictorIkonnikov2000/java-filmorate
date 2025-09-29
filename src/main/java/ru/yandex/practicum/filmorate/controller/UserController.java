@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.UserService;
 
@@ -25,16 +26,30 @@ public class UserController {
     }
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED) // Указываем код 201 Created
-    public User createUser(@RequestBody User user) {
+    public ResponseEntity<Object> createUser(@RequestBody User user) {
         log.info("Получен запрос POST /users с телом: {}", user);
-        return userService.createUser(user); //Возвращаем созданного пользователя
+        try {
+            User createdUser = userService.createUser(user);
+            return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
+        } catch (ValidationException e) {
+            log.warn("Ошибка валидации при создании пользователя: {}", e.getMessage());
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
+        }
     }
 
     @PutMapping
-    public User updateUser(@RequestBody User user) {
+    public ResponseEntity<Object> updateUser(@RequestBody User user) {
         log.info("Получен запрос PUT /users с телом: {}", user);
-        return userService.updateUser(user); //Возвращаем обновленного пользователя
+        try {
+            User updatedUser = userService.updateUser(user);
+            return new ResponseEntity<>(updatedUser, HttpStatus.OK);
+        } catch (NotFoundException e) {
+            log.warn("Пользователь не найден при обновлении с id: {}", user.getId());
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
+        } catch (Exception e) { // Отлавливаем все остальные исключения
+            log.error("Ошибка при обновлении пользователя: {}", e.getMessage(), e);
+            return new ResponseEntity<>(Map.of("error", "Internal server error"), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @GetMapping
