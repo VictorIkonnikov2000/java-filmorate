@@ -25,10 +25,13 @@ public class GenreController {
     }
 
     @GetMapping("/genres/{id}")
-    public ResponseEntity<Genre> getGenreById(@PathVariable Long id) {
+    public ResponseEntity<Genre> getGenreById(@PathVariable Integer id) { // Изменяем Long на Integer
         log.info("Received GET request for /genres/{}", id);
+        // Обработка NotFoundException теперь делегируется ErrorHandler,
+        // но для демонстрации можно оставить try-catch здесь.
+        // Более чистое решение - использовать @ControllerAdvice (ErrorHandler в предыдущем ответе).
         try {
-            Genre genre = genreService.getGenreById(id);
+            Genre genre = genreService.getGenreById(Long.valueOf(id));
             log.info("Returning genre: {}", genre);
             return ResponseEntity.ok(genre);
         } catch (NotFoundException e) {
