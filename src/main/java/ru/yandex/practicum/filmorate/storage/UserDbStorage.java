@@ -100,32 +100,45 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public void addFriend(Long userId, Long friendId) {
-        // Проверка на добавление самого себя в друзья
         if (userId.equals(friendId)) {
             throw new ValidationException("Cannot add self as friend.");
         }
-        // Проверка, что user_id и friend_id существуют
-        getUserById(userId); // Выбросит NotFoundException если нет
-        getUserById(friendId); // Выбросит NotFoundException если нет
 
-        String sql = "INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, false)"; // Изначально статус false (не подтверждена)
-        jdbcTemplate.update(sql, userId, friendId);
-    }
-
-    @Override
-    public void removeFriend(Long userId, Long friendId) {
-        // Добавляем явные проверки на существование пользователей
-        // Это гарантирует, что 404 будет выброшен, если какого-либо пользователя не существует.
-        // Если эти проверки уже есть в тестах, то это может быть избыточно,
-        // но делает метод более надежным.
+        // 1. Проверяем существование обоих пользователей
+        // getUserById уже выбрасывает NotFoundException, если пользователь не найден.
         getUserById(userId);
         getUserById(friendId);
 
+        // 2. Проверяем, существует ли уже дружба, чтобы избежать дубликатов
+        String checkSql = "SELECT COUNT(*) FROM friends WHERE user_id = ? AND friend_id = ?";
+        Integer count = jdbcTemplate.queryForObject(checkSql, Integer.class, userId, friendId);
+        if (count != null && count > 0) {
+            log.info("Friendship between user {} and user {} already exists.", userId, friendId);
+            return; // Если дружба уже есть, просто выходим.
+        }
+
+        // 3. Создаем дружбу (однонаправленную)
+        String sql = "INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, false)";
+        jdbcTemplate.update(sql, userId, friendId);
+    }
+
+
+    @Override
+    public void removeFriend(Long userId, Long friendId) {
+        // 1. Проверяем существование обоих пользователей.
+        // Это важно, чтобы гарантировать, что NotFoundException выбрасывается
+        // в случае, если один из пользователей не существует.
+        // Это соответствует ожиданию 404 для несуществующих ресурсов (пользователей).
+        getUserById(userId);
+        getUserById(friendId);
+
+        // 2. Пытаемся удалить дружбу.
         String sql = "DELETE FROM friends WHERE user_id = ? AND friend_id = ?";
         int rowsAffected = jdbcTemplate.update(sql, userId, friendId);
+
+        // 3. Если ни одна строка не была затронута, значит, такой дружбы не существовало.
+        // В этом случае выбрасываем NotFoundException, что должно быть обработано контроллером как 404.
         if (rowsAffected == 0) {
-            // Если ни одна строка не была затронута, это означает, что такой дружбы не существовало
-            // Это соответствует ожиданию 404 'Not Found' для дружбы
             throw new NotFoundException("Friendship between user " + userId + " and user " + friendId + " not found.");
         }
     }
