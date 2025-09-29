@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import lombok.extern.slf4j.Slf4j; // Добавляем Slf4j для логирования
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError; // Для MethodArgumentNotValidException
@@ -74,6 +75,16 @@ public class ErrorHandler {
         Map<String, String> errorResponse = new HashMap<>();
         errorResponse.put("error", "Произошла непредвиденная ошибка: " + e.getMessage());
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR); // Код 500
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, String>> handleDataIntegrityViolationException(DataIntegrityViolationException e) {
+        log.error("Data integrity violation: {}", e.getMessage(), e);
+        Map<String, String> errorResponse = new HashMap<>();
+        String message = "Нарушение целостности данных. Скорее всего, вы пытаетесь добавить существующую запись или ссылаетесь на несуществующую.";
+        // Можно попытаться разобрать e.getRootCause().getMessage() для более конкретной информации
+        errorResponse.put("error", message);
+        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT); // 409 Conflict - подходящий статус
     }
 }
 
