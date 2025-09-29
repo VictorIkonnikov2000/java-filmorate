@@ -8,7 +8,6 @@ import java.util.*;
 
 
 @Slf4j
-@Component("InMemoryGenreStorage")
 public class InMemoryGenreStorage implements GenreStorage {
 
     private final Map<Long, Genre> genres = new HashMap<>(); // Используем Map для хранения по ID
