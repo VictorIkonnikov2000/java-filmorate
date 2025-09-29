@@ -25,103 +25,104 @@ public class UserController {
         this.userService = userService;
     }
 
+    /**
+     * Обработчик исключения NotFoundException.
+     * Возвращает HTTP статус 404 NOT_FOUND с сообщением об ошибке.
+     * Эта аннотация позволяет Spring автоматически перехватывать NotFoundException,
+     * выброшенные методами контроллера, и обрабатывать их единообразно.
+     */
+    @ExceptionHandler(NotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND) // Указываем, что этот обработчик должен возвращать 404
+    public Map<String, String> handleNotFoundException(NotFoundException e) {
+        log.warn("Обработано исключение NotFoundException: {}", e.getMessage());
+        return Map.of("error", e.getMessage());
+    }
+
+    /**
+     * Обработчик исключения ValidationException.
+     * Возвращает HTTP статус 400 BAD_REQUEST с сообщением об ошибке.
+     */
+    @ExceptionHandler(ValidationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, String> handleValidationException(ValidationException e) {
+        log.warn("Обработано исключение ValidationException: {}", e.getMessage());
+        return Map.of("error", e.getMessage());
+    }
+
+
     @PostMapping
-    public ResponseEntity<Object> createUser(@RequestBody User user) {
+    public ResponseEntity<User> createUser(@RequestBody User user) {
         log.info("Получен запрос POST /users с телом: {}", user);
-        try {
-            User createdUser = userService.createUser(user);
-            return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
-        } catch (ValidationException e) {
-            log.warn("Ошибка валидации при создании пользователя: {}", e.getMessage());
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
-        }
+        // Обработка ValidationException теперь будет автоматически перехвачена @ExceptionHandler
+        User createdUser = userService.createUser(user);
+        return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
     }
 
     @PutMapping
-    public ResponseEntity<Object> updateUser(@RequestBody User user) {
+    public ResponseEntity<User> updateUser(@RequestBody User user) {
         log.info("Получен запрос PUT /users с телом: {}", user);
+        // NotFoundException и ValidationException будут автоматически перехвачены @ExceptionHandler
+        // Общие исключения можно дополнительно отлавливать, если они не покрываются другими обработчиками
         try {
             User updatedUser = userService.updateUser(user);
             return new ResponseEntity<>(updatedUser, HttpStatus.OK);
-        } catch (NotFoundException e) {
-            log.warn("Пользователь не найден при обновлении с id: {}", user.getId());
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        } catch (Exception e) { // Отлавливаем все остальные исключения
-            log.error("Ошибка при обновлении пользователя: {}", e.getMessage(), e);
-            return new ResponseEntity<>(Map.of("error", "Internal server error"), HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (Exception e) { // Отлавливаем любые другие неожиданные исключения
+            log.error("Произошла неожиданная ошибка при обновлении пользователя: {}", e.getMessage(), e);
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     @GetMapping
     public List<User> getAllUsers() {
         log.info("Получен запрос GET /users");
-        return userService.getAllUsers();//Возвращаем список всех пользователей
+        return userService.getAllUsers();
     }
 
 
     @PutMapping("/{id}/friends/{friendId}")
-    public ResponseEntity<?> addFriend(@PathVariable Long id, @PathVariable Long friendId) {
+    @ResponseStatus(HttpStatus.NO_CONTENT) // Если дружба добавлена успешно, возвращаем 204 No Content
+    public void addFriend(@PathVariable Long id, @PathVariable Long friendId) {
         log.info("Получен запрос PUT /users/{}/friends/{}", id, friendId);
-        try {
-            userService.addFriend(id, friendId);
-            log.info("Пользователи {} и {} добавлены в друзья.", id, friendId);
-            // Возвращаем 204 No Content, так как операция успешна и не возвращает тело.
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-        } catch (NotFoundException e) {
-            log.warn("Пользователь с id {} или {} не найден.", id, friendId);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом
-        } catch (ValidationException e) { // Добавляем обработку ValidationException
-            log.warn("Ошибка валидации при добавлении в друзья: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
-        }
+        // NotFoundException и ValidationException будут автоматически перехвачены @ExceptionHandler
+        userService.addFriend(id, friendId);
+        log.info("Пользователи {} и {} добавлены в друзья.", id, friendId);
     }
 
     @DeleteMapping("/{id}/friends/{friendId}")
-    public ResponseEntity<?> deleteFriend(@PathVariable Long id, @PathVariable Long friendId) {
+    @ResponseStatus(HttpStatus.NO_CONTENT) // Если дружба удалена успешно, возвращаем 204 No Content
+    public void deleteFriend(@PathVariable Long id, @PathVariable Long friendId) {
         log.info("Получен запрос DELETE /users/{}/friends/{}", id, friendId);
-        try {
-            userService.removeFriend(id, friendId);
-            log.info("Пользователи {} и {} удалены из друзей.", id, friendId);
-            // Возвращаем 204 No Content, так как операция успешна и не возвращает тело.
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-        } catch (NotFoundException e) {
-            log.warn("Пользователь с id {} или {} не найден.", id, friendId);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом
-        }
+        // NotFoundException будет автоматически перехвачено @ExceptionHandler
+        userService.removeFriend(id, friendId);
+        log.info("Пользователи {} и {} удалены из друзей.", id, friendId);
     }
 
     @GetMapping("/{id}/friends")
-    public ResponseEntity<?> getFriends(@PathVariable Long id) {
+    public List<User> getFriends(@PathVariable Long id) {
         log.info("Получен запрос GET /users/{}/friends", id);
-        try {
-            List<User> friends = userService.getFriends(id);
-            log.info("Список друзей пользователя {}: {}", id, friends);
-            return new ResponseEntity<>(friends, HttpStatus.OK);
-        } catch (NotFoundException e) {
-            log.warn("Пользователь с id {} не найден.", id);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом
-        }
+        // NotFoundException будет автоматически перехвачено @ExceptionHandler
+        List<User> friends = userService.getFriends(id);
+        log.info("Список друзей пользователя {}: {}", id, friends);
+        return friends; // Возвращаем 200 OK со списком (может быть пустым)
     }
 
     @GetMapping("/{id}/friends/common/{otherId}")
     public List<User> getCommonFriends(@PathVariable Long id, @PathVariable Long otherId) {
         log.info("Получен запрос GET /users/{}/friends/common/{}", id, otherId);
+        // NotFoundException будет автоматически перехвачено @ExceptionHandler
         List<User> commonFriends = userService.getCommonFriends(id, otherId);
         log.info("Общие друзья пользователей {} и {}: {}", id, otherId, commonFriends);
-        return commonFriends;
+        return commonFriends; // Возвращаем 200 OK со списком (может быть пустым)
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getUserById(@PathVariable Long id) {
-        try {
-            User user = userService.getUserById(id);
-            return new ResponseEntity<>(user, HttpStatus.OK);
-        } catch (NotFoundException e) {
-            log.warn("Пользователь с id {} не найден.", id);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом
-        }
+    public User getUserById(@PathVariable Long id) {
+        log.info("Запрос getUserById для id: {}", id);
+        // NotFoundException будет автоматически перехвачено @ExceptionHandler
+        return userService.getUserById(id); // Возвращает 200 OK
     }
 }
+
 
 
 

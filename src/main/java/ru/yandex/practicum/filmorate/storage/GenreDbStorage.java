@@ -13,10 +13,11 @@ import ru.yandex.practicum.filmorate.model.Genre;
 import lombok.extern.slf4j.Slf4j;
 
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component("GenreDbStorage")
@@ -135,6 +136,33 @@ public class GenreDbStorage implements GenreStorage {
             throw new NotFoundException("Genre not found with ID: " + id);
         }
         log.info("Удален жанр с ID: {}", id);
+    }
+
+    @Override
+    public List<Genre> getGenresByIds(Collection<Long> genreIds) {
+        if (genreIds == null || genreIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Преобразуем Long в Integer, если genre_id в БД int.
+        // Или можно использовать Object[] и H2 преобразует автоматически, но лучше явно.
+        List<Integer> intGenreIds = genreIds.stream()
+                .map(Long::intValue)
+                .collect(Collectors.toList());
+
+        // Формируем строку с плейсхолдерами (?, ?, ...) для IN-клаузы
+        String inSql = String.join(",", Collections.nCopies(intGenreIds.size(), "?"));
+        String sql = String.format("SELECT * FROM genres WHERE genre_id IN (%s) ORDER BY genre_id ASC", inSql);
+
+        // Передаем список ID как массив для аргументов
+        return jdbcTemplate.query(sql, intGenreIds.toArray(), this::mapRowToGenre);
+    }
+
+    private Genre mapRowToGenre(ResultSet rs, int rowNum) throws SQLException {
+        return Genre.builder()
+                .id(rs.getLong("genre_id"))
+                .name(rs.getString("genre_name"))
+                .build();
     }
 }
 

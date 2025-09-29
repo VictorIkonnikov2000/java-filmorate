@@ -1,8 +1,10 @@
 package ru.yandex.practicum.filmorate.model;
 
+import lombok.Builder;
 import lombok.Data;
 
 @Data
+@Builder
 public class Genre {
     private Long id;       // Уникальный идентификатор жанра
     private String name;// Название жанра
