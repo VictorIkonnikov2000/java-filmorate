@@ -240,6 +240,8 @@ public class UserDbStorage implements UserStorage {
                 .birthday(rs.getDate("birthday").toLocalDate())
                 .build();
     }
+
+
 }
 
 

@@ -128,4 +128,9 @@ public class InMemoryUserStorage implements UserStorage {
         }
         return user;
     }
+
+    @Override
+    public void confirmFriendship(Long userId, Long friendId) {
+        
+    }
 }
