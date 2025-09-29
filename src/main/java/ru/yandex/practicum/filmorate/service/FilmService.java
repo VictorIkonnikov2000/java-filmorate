@@ -2,6 +2,8 @@ package ru.yandex.practicum.filmorate.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
@@ -20,10 +22,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class FilmService {
 
-    private final FilmStorage filmStorage;
-    private final UserStorage userStorage;
-    private final GenreStorage genreStorage;
-    private final MpaRatingStorage mpaRatingStorage;
+    private final @Qualifier("FilmDbStorage") FilmStorage filmStorage;
+    private final @Qualifier("UserDbStorage") UserStorage userStorage;
+    private final @Qualifier("GenreDbStorage") GenreStorage genreStorage;
+    private final @Qualifier("MpaRatingDbStorage") MpaRatingStorage mpaRatingStorage;
+
+
 
     public Film createFilm(Film film) {
         // Логируем создание фильма

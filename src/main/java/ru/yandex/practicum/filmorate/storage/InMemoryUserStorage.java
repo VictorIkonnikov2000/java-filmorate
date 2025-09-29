@@ -9,8 +9,9 @@ import ru.yandex.practicum.filmorate.validate.UserValidate;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Component
+
 @Slf4j
+@Component("InMemoryUserStorage")
 public class InMemoryUserStorage implements UserStorage {
 
     private final Map<Long, User> users = new HashMap<>();

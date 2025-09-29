@@ -9,13 +9,13 @@ import ru.yandex.practicum.filmorate.model.MpaRating;
 
 import java.util.List;
 
-@Component
-public class MpaRaitingDbStorage implements MpaRatingStorage {
+@Component("MpaRatingDbStorage")
+public class MpaRatingDbStorage implements MpaRatingStorage {
 
     private final JdbcTemplate jdbcTemplate;
 
     @Autowired
-    public MpaRaitingDbStorage(JdbcTemplate jdbcTemplate) {
+    public MpaRatingDbStorage(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 

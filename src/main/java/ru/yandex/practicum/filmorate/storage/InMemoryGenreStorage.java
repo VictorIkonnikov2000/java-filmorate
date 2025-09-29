@@ -6,8 +6,9 @@ import ru.yandex.practicum.filmorate.model.Genre;
 
 import java.util.*;
 
-@Component
+
 @Slf4j
+@Component("InMemoryGenreStorage")
 public class InMemoryGenreStorage implements GenreStorage {
 
     private final Map<Long, Genre> genres = new HashMap<>(); // Используем Map для хранения по ID

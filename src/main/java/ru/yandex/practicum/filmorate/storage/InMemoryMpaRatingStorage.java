@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Component // Указываем, что это компонент Spring для автоматического создания экземпляра
+@Component("InMemoryMpaRatingStorage") // Указываем, что это компонент Spring для автоматического создания экземпляра
 public class InMemoryMpaRatingStorage implements MpaRatingStorage {
     private final Map<Long, MpaRating> ratings = new HashMap<>(); // Хранилище рейтингов в памяти, где ключ - ID
 

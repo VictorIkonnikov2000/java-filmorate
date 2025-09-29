@@ -15,7 +15,7 @@ import java.sql.Date;
 
 
 @Component
-@Qualifier("filmDbStorage")
+@Qualifier("FilmDbStorage")
 public class FilmDbStorage implements FilmStorage {
 
     private final JdbcTemplate jdbcTemplate;

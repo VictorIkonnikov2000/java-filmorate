@@ -13,8 +13,7 @@ import ru.yandex.practicum.filmorate.validate.UserValidate;
 import java.sql.Date;
 import java.util.List;
 
-@Component
-@Qualifier("userDbStorage")
+@Component("UserDbStorage")
 public class UserDbStorage implements UserStorage {
 
     private final JdbcTemplate jdbcTemplate;

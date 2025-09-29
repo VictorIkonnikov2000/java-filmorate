@@ -10,7 +10,7 @@ import ru.yandex.practicum.filmorate.model.Genre;
 import java.util.List;
 import java.util.Optional;
 
-@Component
+@Component("GenreDbStorage")
 public class GenreDbStorage implements GenreStorage {
 
     private final JdbcTemplate jdbcTemplate;
