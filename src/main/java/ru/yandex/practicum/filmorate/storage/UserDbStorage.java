@@ -16,7 +16,7 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional; // Для Optional<Boolean>
+import java.util.Optional;
 
 @Slf4j
 @Component("UserDbStorage")
@@ -38,7 +38,8 @@ public class UserDbStorage implements UserStorage {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         String sql = "INSERT INTO users (email, login, name, birthday) VALUES (?, ?, ?, ?)";
         jdbcTemplate.update(connection -> {
-            PreparedStatement ps = connection.prepareStatement(sql, new String[]{"user_id"}); // В SQL id обычно auto increment, поэтому указывать "user_id" как возвращаемое значение для GeneratedKeyHolder
+            // Убедитесь, что "user_id" - это правильное имя столбца с автоинкрементом
+            PreparedStatement ps = connection.prepareStatement(sql, new String[]{"user_id"});
             ps.setString(1, user.getEmail());
             ps.setString(2, user.getLogin());
             ps.setString(3, user.getName());
@@ -57,20 +58,19 @@ public class UserDbStorage implements UserStorage {
             user.setName(user.getLogin());
         }
 
-        // Проверка наличия пользователя:
-        // Если getUserById выбрасывает NotFoundException, то это нормально, мы его поймаем.
-        // Если он возвращает null, тогда это проблема в getUserById.
-        // Корректнее: getUserById сам выбрасывает исключение, нет необходимости в if (getUserById(...)).
-        // Просто вызов getUserById(user.getId()) до обновления
-        if (getUserById(user.getId()) == null) { // Этот вызов можно убрать, если getUserById уже бросает NotFoundException
-            throw new NotFoundException("User not found for update with id: " + user.getId());
-        }
-
+        // Проверяем существование пользователя. getUserById выбросит NotFoundException, если его нет.
+        getUserById(user.getId());
 
         String sql = "UPDATE users SET email = ?, login = ?, name = ?, birthday = ? WHERE user_id = ?";
         int rows = jdbcTemplate.update(sql, user.getEmail(), user.getLogin(), user.getName(), Date.valueOf(user.getBirthday()), user.getId());
-        if (rows == 0) { // Также проверяем, что строка была изменена
-            throw new NotFoundException("User not found for update with id: " + user.getId());
+
+        // Если getUserById не выбросил исключение, то rows должно быть 1.
+        // Если по какой-то причине rows == 0 ЗДЕСЬ, это указывает на логическую ошибку,
+        // возможно, в условиях WHERE или в ID, но не на "пользователь не найден".
+        // В данном случае, это не должно произойти, если getUserById сработал.
+        // Для демонстрации, можно оставить как есть, в реальном проекте это может быть просто log.error.
+        if (rows == 0) {
+            throw new NotFoundException("Update failed for user with id: " + user.getId() + ". User found, but no rows affected.");
         }
         return user;
     }
@@ -106,16 +106,29 @@ public class UserDbStorage implements UserStorage {
         if (existingStatus.isPresent()) {
             if (existingStatus.get()) {
                 log.info("Friendship between user {} and {} already accepted.", userId, friendId);
-                // Можно выбросить исключение или просто ничего не делать, в зависимости от требований
                 throw new ValidationException("Friendship already accepted.");
             } else {
                 log.info("Friendship request from user {} to {} already pending.", userId, friendId);
                 throw new ValidationException("Friendship request already pending.");
             }
         }
-        // Можно также рассмотреть случай, когда friendId уже отправил заявку userId (обратная заявка)
-        // Если, например, нужно, чтобы пользователь, получающий заявку, мог сразу ее принять без создания новой
-        // Это зависит от бизнес-логики. Пока оставим это вне.
+
+        // Дополнительная проверка, чтобы избежать дублирования обратных заявок (если это не нужно)
+        // Если user2 уже отправил заявку user1
+        String checkReverseSql = "SELECT status FROM friends WHERE user_id = ? AND friend_id = ?";
+        Optional<Boolean> existingReverseStatus = jdbcTemplate.query(checkReverseSql, rs -> {
+            if (rs.next()) {
+                return Optional.of(rs.getBoolean("status"));
+            }
+            return Optional.empty();
+        }, friendId, userId);
+
+        if (existingReverseStatus.isPresent() && !existingReverseStatus.get()) {
+            // Если есть обратная, неподтвержденная заявка, то можно сразу ее подтвердить,
+            // или считать новую заявку избыточной. Зависит от бизнес-логики.
+            log.info("User {} sent friend request to user {}, but user {} already has a pending request to user {}. Consider confirming existing one.", userId, friendId, friendId, userId);
+            throw new ValidationException("A pending friendship request already exists from friend to user. Please confirm it.");
+        }
 
         // 3. Отправляем заявку в друзья (статус false - PENDING)
         String sql = "INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, false)";
@@ -142,7 +155,13 @@ public class UserDbStorage implements UserStorage {
 
         // Обновляем статус заявки на true (ACCEPTED)
         String updateSql = "UPDATE friends SET status = true WHERE user_id = ? AND friend_id = ?";
-        jdbcTemplate.update(updateSql, requesterId, accepterId);
+        int rows = jdbcTemplate.update(updateSql, requesterId, accepterId);
+
+        if (rows == 0) {
+            log.warn("Friendship confirmation failed for request from {} to {}. No rows updated.", requesterId, accepterId);
+            // Это не должно произойти, если pendingRequests > 0, но на всякий случай.
+            throw new IllegalStateException("Friendship update failed after pending request check.");
+        }
         log.info("User {} accepted friend request from user {}", accepterId, requesterId);
     }
 
@@ -150,8 +169,6 @@ public class UserDbStorage implements UserStorage {
     /**
      * Пользователь userId удаляет friendId из своего списка друзей.
      * Удаляется запись (userId, friendId), независимо от статуса.
-     * Если дружба двусторонняя, то для полного разрыва нужно удалять и (friendId, userId),
-     * но по условию "односторонней" дружбы, пользователь удаляет только из СВОЕГО списка.
      */
     @Override
     public void removeFriend(Long userId, Long friendId) {
@@ -163,13 +180,11 @@ public class UserDbStorage implements UserStorage {
         int rowsAffected = jdbcTemplate.update(sql, userId, friendId);
 
         if (rowsAffected == 0) {
-            // Если записей не найдено, это может быть, что такой дружбы и не было
-            // или что-то пошло не так. Лучше логировать, а не выбрасывать NotFoundException,
-            // т.к. "удалить то, чего нет" не всегда ошибка.
+            // Если записей не найдено, это означает, что дружбы не было.
+            // Ваш текущий код бросает NotFoundException, и это нормально, если
+            // API должен возвращать 404 при попытке удалить несуществующий ресурс/связь.
             log.warn("Attempted to remove non-existent friendship from user {} to user {}", userId, friendId);
-            // Или можно выбросить NotFoundException, если это требование, чтобы удалялся
-            // только существующий объект. Ваш текущий код бросает исключение, так и оставим.
-            throw new NotFoundException("Friendship from user " + userId + " to user " + friendId + " not found.");
+            throw new NotFoundException("Friendship from user " + userId + " to user " + friendId + " not found to remove.");
         }
         log.info("User {} removed friend {}", userId, friendId);
     }
@@ -190,6 +205,8 @@ public class UserDbStorage implements UserStorage {
 
     /**
      * Возвращает список общих подтвержденных друзей для userId и otherId.
+     * Общие друзья - это пользователи, которые являются подтвержденными друзьями
+     * как для userId, так и для otherId.
      */
     @Override
     public List<User> getCommonFriends(Long userId, Long otherId) {
@@ -214,17 +231,17 @@ public class UserDbStorage implements UserStorage {
         }
     }
 
-    // Перемещаем userRowMapper в конец или в отдельный класс для чистоты
     private RowMapper<User> userRowMapper() {
         return (rs, rowNum) -> User.builder()
                 .id(rs.getLong("user_id"))
                 .email(rs.getString("email"))
                 .login(rs.getString("login"))
                 .name(rs.getString("name"))
-                .birthday(rs.getDate("birthday") != null ? rs.getDate("birthday").toLocalDate() : null)
+                .birthday(rs.getDate("birthday").toLocalDate())
                 .build();
     }
 }
+
 
 
 
