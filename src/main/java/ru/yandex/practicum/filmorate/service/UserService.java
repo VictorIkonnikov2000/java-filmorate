@@ -16,7 +16,7 @@ import static ru.yandex.practicum.filmorate.validate.UserValidate.validateUser;
 @Slf4j
 public class UserService {
 
-    private final  UserStorage userStorage;
+    private final UserStorage userStorage;
 
 
     public User createUser(User user) {
@@ -28,9 +28,6 @@ public class UserService {
 
     public User updateUser(User user) {
         validateUser(user);
-        // Проверка существования пользователя теперь инкапсулирована в userStorage.updateUser
-        // userStorage.updateUser сам вызовет getUserByIdOrThrow(user.getId()) и выбросит NotFoundException
-        // если пользователь не найден, или если update-запрос не затронул ни одной строки.
         log.info("Обновление пользователя с ID: {}", user.getId());
         return userStorage.updateUser(user);
     }
@@ -50,18 +47,6 @@ public class UserService {
         // Проверка существования пользователей теперь инкапсулирована в userStorage.addFriend
         userStorage.addFriend(userId, friendId);
         log.info("Пользователь {} отправил запрос в друзья пользователю {}.", userId, friendId);
-    }
-
-
-
-    public void acceptFriendRequest(Long userId, Long friendId) {
-        if (userId.equals(friendId)) {
-            log.warn("Пользователь с ID {} попытался принять запрос от самого себя.", userId);
-            throw new ValidationException("Невозможно подтвердить запрос от самого себя.");
-        }
-        // userStorage.confirmFriendship теперь сам проверяет существование пользователей и наличие заявки
-        userStorage.confirmFriendship(userId, friendId);
-        log.info("Пользователь {} принял заявку в друзья от пользователя {}.", userId, friendId);
     }
 
 
