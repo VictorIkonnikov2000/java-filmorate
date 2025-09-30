@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS likes (
     FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS user_friends (
+CREATE TABLE IF NOT EXISTS friends (
     user_id BIGINT REFERENCES users(user_id) ON DELETE CASCADE,
     friend_id BIGINT REFERENCES users(user_id) ON DELETE CASCADE,
     requested_at TIMESTAMP NOT NULL,
