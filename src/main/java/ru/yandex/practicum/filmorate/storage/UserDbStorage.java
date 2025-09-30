@@ -101,7 +101,7 @@ public class UserDbStorage implements UserStorage {
             throw new NotFoundException("Пользователь с id " + id + " не найден.");
         }
     }
-    
+
     @Override
     public void addFriend(Long userId, Long friendId) {
         if (userId.equals(friendId)) {
