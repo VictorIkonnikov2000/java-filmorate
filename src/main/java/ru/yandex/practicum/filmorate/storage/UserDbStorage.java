@@ -145,17 +145,17 @@ public class UserDbStorage implements UserStorage {
         getUserById(userId);
         getUserById(friendId);
 
-        // Удаляем обе записи, обеспечивающие взаимность дружбы
-        String deleteSql = "DELETE FROM friends WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)";
-        int deletedRows = jdbcTemplate.update(deleteSql, userId, friendId, friendId, userId);
+        // Удаляем только одну запись, чтобы разорвать дружбу только в одном направлении.
+        String deleteSql = "DELETE FROM friends WHERE user1_id = ? AND user2_id = ?";
+        int deletedRows = jdbcTemplate.update(deleteSql, userId, friendId);
 
         if (deletedRows == 0) {
             log.warn("Не найдено дружбы между пользователем {} и {}.", userId, friendId);
-            // Если тесты ожидают исключение при отсутствии дружбы:
 
         }
-        log.info("Дружба между пользователем {} и {} успешно удалена.", userId, friendId);
+        log.info("Пользователь {} удалил из друзей пользователя {}.", userId, friendId);
     }
+
 
     /**
      * Получить список друзей пользователя.
