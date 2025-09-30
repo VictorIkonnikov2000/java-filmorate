@@ -168,13 +168,18 @@ public class UserDbStorage implements UserStorage {
     public List<User> getFriends(Long userId) {
         getUserById(userId); // Проверить существование пользователя
 
-        String sql = "SELECT u.user_id, u.email, u.login, u.name, u.birthday " +
+        // Если у вас таблица users имеет поле 'id', а не 'user_id'
+        // то используйте u.id
+        String sql = "SELECT DISTINCT u.user_id, u.email, u.login, u.name, u.birthday " +
                 "FROM users AS u " +
-                "INNER JOIN friends AS f ON u.user_id = f.user2_id " +
-                "WHERE f.user1_id = ?"; // Ищем друзей, для которых userId является user1_id
+                "INNER JOIN friends AS f ON " +
+                "  (u.user_id = f.user2_id AND f.user1_id = ?) " + // userId добавил u.user_id
+                "  OR (u.user_id = f.user1_id AND f.user2_id = ?) "; // u.user_id добавил userId
 
-        return jdbcTemplate.query(sql, userRowMapper(), userId);
+        // Параметры для двух вопросительных знаков в O.R. условии
+        return jdbcTemplate.query(sql, userRowMapper(), userId, userId);
     }
+
 
     /**
      * Получить список общих друзей между двумя пользователями.
