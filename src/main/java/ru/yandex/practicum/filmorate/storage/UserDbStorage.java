@@ -2,6 +2,7 @@ package ru.yandex.practicum.filmorate.storage;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataRetrievalFailureException;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -140,29 +141,53 @@ public class UserDbStorage implements UserStorage {
      * Пользователь accepterId подтверждает заявку в друзья от requesterId.
      * Статус дружбы (requesterId -> accepterId) меняется на ACCEPTED (true).
      */
+    @Override
     public void confirmFriendship(Long accepterId, Long requesterId) {
-        // Проверяем существование пользователей
         getUserById(accepterId);
         getUserById(requesterId);
 
-        // Проверяем, существует ли pending заявка от requesterId к accepterId
-        String checkSql = "SELECT COUNT(*) FROM friends WHERE user_id = ? AND friend_id = ? AND status = false";
-        Integer pendingRequests = jdbcTemplate.queryForObject(checkSql, Integer.class, requesterId, accepterId);
+        // 1. Проверяем, существует ли ожидающая заявка от requesterId к accepterId
+        String checkPendingSql = "SELECT status FROM friends WHERE user_id = ? AND friend_id = ?";
+        Optional<Boolean> pendingExistence = Optional.empty();
+        try {
+            pendingExistence = Optional.ofNullable(jdbcTemplate.queryForObject(checkPendingSql, Boolean.class, requesterId, accepterId));
+        } catch (EmptyResultDataAccessException ignored) {}
 
-        if (pendingRequests == null || pendingRequests == 0) {
-            throw new NotFoundException("No pending friend request from user " + requesterId + " to user " + accepterId + " found.");
+        if (pendingExistence.isPresent()) {
+            if (pendingExistence.get()) { // status = true
+                log.info("Дружба между {} и {} уже подтверждена.", requesterId, accepterId);
+                // Если это уже confirmed, то дальнейшие действия могут быть избыточными или вызвать ошибку.
+                // Можно просто выйти или бросить ValidationException.
+                throw new ValidationException("Запрос от пользователя " + requesterId + " к пользователю " + accepterId + " уже подтвержден.");
+            } else { // status = false
+                // Обновляем статус заявки (requesterId -> accepterId) на true
+                String updateSql = "UPDATE friends SET status = true WHERE user_id = ? AND friend_id = ?";
+                jdbcTemplate.update(updateSql, requesterId, accepterId);
+                log.info("Пользователь {} подтвердил запрос от пользователя {}.", accepterId, requesterId);
+            }
+        } else {
+            // Если заявки (requesterId -> accepterId) вообще не было
+            throw new NotFoundException("Не найдена ожидающая заявка от пользователя " + requesterId + " к пользователю " + accepterId + ".");
         }
 
-        // Обновляем статус заявки на true (ACCEPTED)
-        String updateSql = "UPDATE friends SET status = true WHERE user_id = ? AND friend_id = ?";
-        int rows = jdbcTemplate.update(updateSql, requesterId, accepterId);
+        // 2. Убедимся, что существует симметричная дружба (accepterId -> requesterId) со статусом true.
+        // Это гарантирует, что дружба является взаимной.
+        String checkSymmetricSql = "SELECT status FROM friends WHERE user_id = ? AND friend_id = ?";
+        Optional<Boolean> symmetricExistence = Optional.empty();
+        try {
+            symmetricExistence = Optional.ofNullable(jdbcTemplate.queryForObject(checkSymmetricSql, Boolean.class, accepterId, requesterId));
+        } catch (EmptyResultDataAccessException ignored) {}
 
-        if (rows == 0) {
-            log.warn("Friendship confirmation failed for request from {} to {}. No rows updated.", requesterId, accepterId);
-            // Это не должно произойти, если pendingRequests > 0, но на всякий случай.
-            throw new IllegalStateException("Friendship update failed after pending request check.");
+        if (symmetricExistence.isEmpty() || !symmetricExistence.get()) {
+            // Если симметричной записи нет или она не true, создаем/обновляем её.
+            String insertOrUpdateSymmetricSql = "INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, true) " +
+                    "ON CONFLICT (user_id, friend_id) DO UPDATE SET status = true";
+            // ON CONFLICT - это PostgreSQL специфично. Для H2/MySQL может потребоваться другая логика
+            // (сначала SELECT, потом INSERT или UPDATE).
+            // Для H2: MERGE INTO friends (user_id, friend_id, status) KEY(user_id, friend_id) VALUES (?, ?, true)
+            jdbcTemplate.update(insertOrUpdateSymmetricSql, accepterId, requesterId);
+            log.info("Создана/обновлена симметричная запись дружбы между {} и {} со статусом true.", accepterId, requesterId);
         }
-        log.info("User {} accepted friend request from user {}", accepterId, requesterId);
     }
 
 
