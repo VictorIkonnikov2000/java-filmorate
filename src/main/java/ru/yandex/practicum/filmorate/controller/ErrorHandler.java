@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import ru.yandex.practicum.filmorate.exception.NotFoundException; // Импортируем наше новое исключение
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 
@@ -11,7 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j // Добавляем логирование
-
+@ControllerAdvice
 public class ErrorHandler {
 
     // Обработка ValidationException (HTTP 400 Bad Request)
