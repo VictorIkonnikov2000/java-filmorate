@@ -35,15 +35,6 @@ public class ErrorHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
     }
 
-    // Общая обработка всех остальных Exception (HTTP 500 Internal Server Error)
-    @ExceptionHandler(Throwable.class) // Throwable - это базовый класс для всех ошибок и исключений
-    public ResponseEntity<Map<String, String>> handleThrowable(Throwable e) {
-        log.error("Произошла внутренняя ошибка сервера: {}", e.getMessage(), e); // Логируем ошибку с трассировкой
-        Map<String, String> errorResponse = new HashMap<>();
-        // Возвращаем общее сообщение, чтобы не раскрывать внутреннюю информацию сервера
-        errorResponse.put("error", "Произошла внутренняя ошибка сервера.");
-        // Возвращаем ответ с кодом 500 (Internal Server Error)
-        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+
 }
 
