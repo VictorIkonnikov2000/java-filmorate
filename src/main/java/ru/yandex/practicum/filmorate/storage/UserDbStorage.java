@@ -218,53 +218,47 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public void removeFriend(Long userId, Long friendId) {
-        getUserById(userId);
-        getUserById(friendId);
-
-        // Удаляем обе записи (если дружба взаимная), чтобы полностью разорвать отношения
-        String sql = "DELETE FROM friends WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)";
-        int deletedRows = jdbcTemplate.update(sql, userId, friendId, friendId, userId);
-
-        if (deletedRows == 0) {
-            log.warn("Не найдена дружба или запрос на дружбу между пользователем {} и {}", userId, friendId);
-            throw new NotFoundException(
-                    String.format("Дружба или запрос на дружбу между пользователем %d и %d не найден.", userId, friendId));
+        if (userId.equals(friendId)) {
+            throw new ValidationException("Пользователь не может сам себя удалить из друзей.");
         }
-        log.info("Удалена дружба или запрос между {} и {}", userId, friendId);
+        // 1. Проверяем существование обоих пользователей
+        getUserById(userId); // Бросит NotFoundException, если userId не найден
+        getUserById(friendId); // Бросит NotFoundException, если friendId не найден// 2. Удаляем прямую связь (если userId отправил запрос friendId или уже дружит)
+        String deleteDirectSql = "DELETE FROM friends WHERE user_id = ? AND friend_id = ?";
+        int deletedDirect = jdbcTemplate.update(deleteDirectSql, userId, friendId);
+
+// 3. Удаляем обратную связь (если friendId отправил запрос userId или уже дружит)
+        String deleteReverseSql = "DELETE FROM friends WHERE user_id = ? AND friend_id = ?";
+        int deletedReverse = jdbcTemplate.update(deleteReverseSql, friendId, userId);
+
+        if (deletedDirect == 0 && deletedReverse == 0) {
+            log.warn("Не найдено дружбы или запроса на дружбу между пользователем {} и {}.", userId, friendId);
+            throw new NotFoundException("Дружба или запрос на дружбу между пользователем " + userId + " и " + friendId + " не найден.");
+        }
+        log.info("Дружба или запрос на дружбу между пользователем {} и {} успешно удалены.", userId, friendId);
+
     }
+
 
     @Override
     public List<User> getFriends(Long userId) {
         getUserById(userId); // Проверить существование пользователя
 
-        // Возвращаем только тех пользователей, с которыми установлена подтвержденная дружба (status = true)
-        // ИЛИ тех, кто отправил userId запрос, и этот запрос был подтвержден (т.е. userId является accepterId и status = true)
         String sql = "SELECT u.user_id, u.email, u.login, u.name, u.birthday " +
                 "FROM users AS u " +
                 "JOIN friends AS f ON u.user_id = f.friend_id " +
                 "WHERE f.user_id = ? AND f.status = true";
-        // Можно также добавить UNION для обратных связей, если модель дружбы только односторонняя:
-        // UNION
-        //SELECT u.user_id, u.email, u.login, u.name, u.birthday
-        //FROM users AS u
-        //JOIN friends AS f ON u.user_id = f.user_id
-        //WHERE f.friend_id = ? AND f.status = true
 
-        // Однако, если мы гарантируем взаимное добавление записей (userId->friendId и friendId->userId)
-        // при подтверждении дружбы, то достаточно первого запроса.
         return jdbcTemplate.query(sql, userRowMapper(), userId);
     }
+
+
 
     @Override
     public List<User> getCommonFriends(Long userId, Long otherUserId) {
         getUserById(userId);
         getUserById(otherUserId);
 
-        // SQL для поиска общих друзей:
-        // Находим друзей userId, затем из них выбираем тех, кто также является другом otherUserId.
-        // Учитываем, что дружба должна быть подтвержденной (status = true) в обе стороны для обоих.
-        // Если модель дружеских связей предполагает две записи (A->B, B->A) с статусом true для подтвержденной дружбы,
-        // то запрос может выглядеть так:
         String sql = "SELECT u.user_id, u.email, u.login, u.name, u.birthday " +
                 "FROM users AS u " +
                 "JOIN friends AS f1 ON u.user_id = f1.friend_id " + // F1 - друг userId
@@ -272,18 +266,7 @@ public class UserDbStorage implements UserStorage {
                 "WHERE f1.user_id = ? AND f1.status = TRUE " +      // userId дружит с F1
                 "AND f2.user_id = ? AND f2.status = TRUE";          // otherUserId дружит с F2
 
-        // Если дружба не симметрична, а просто один запрос (user_id, friend_id, status),
-        // и мы ищем тех, кто "в кругу друзей" у обоих, то:
-        /*
-        String sql = "SELECT u.user_id, u.email, u.login, u.name, u.birthday " +
-                     "FROM users AS u " +
-                     "WHERE u.user_id IN (" +
-                     " SELECT f.friend_id FROM friends f WHERE f.user_id = ? AND f.status = TRUE" +
-                     ") AND u.user_id IN (" +
-                     " SELECT f.friend_id FROM friends f WHERE f.user_id = ? AND f.status = TRUE" +
-                     ")";
-        */
-        // Первый вариант JOIN обычно эффективнее.
+
         return jdbcTemplate.query(sql, userRowMapper(), userId, otherUserId);
     }
 
