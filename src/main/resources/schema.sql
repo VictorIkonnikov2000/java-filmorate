@@ -54,12 +54,12 @@ CREATE TABLE IF NOT EXISTS likes (
 );
 
 CREATE TABLE IF NOT EXISTS friends (
-    user1_id BIGINT NOT NULL,
-    user2_id BIGINT NOT NULL,
-    status BOOLEAN NOT NULL,
-    PRIMARY KEY (user1_id, user2_id),
-    FOREIGN KEY (user1_id) REFERENCES users (user_id) ON DELETE CASCADE,
-    FOREIGN KEY (user2_id) REFERENCES users (user_id) ON DELETE CASCADE
+   user1_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+       user2_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+       status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+       PRIMARY KEY (user1_id, user2_id),
+       CHECK (user1_id <> user2_id),
+       CHECK (status IN ('PENDING', 'CONFIRMED'))
 );
 
 
