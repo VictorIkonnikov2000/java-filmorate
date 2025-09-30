@@ -18,7 +18,7 @@ import static ru.yandex.practicum.filmorate.validate.UserValidate.validateUser;
 @Slf4j
 public class UserService {
 
-    private final @Qualifier("UserDbStorage") UserStorage userStorage;
+    private final  UserStorage userStorage;
 
     // Метод getUserByIdOrThrow из UserDbStorage можно перенести сюда или создать аналогичный вспомогательный
     // для использования в UserService, если UserStorage не абстрагирует это для всех реализаций.

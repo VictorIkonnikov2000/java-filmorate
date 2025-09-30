@@ -189,21 +189,15 @@ public class FilmDbStorage implements FilmStorage {
         }
     }
 
-    // Вспомогательный RowMapper для Film
     private RowMapper<Film> filmRowMapper() {
-        return (rs, rowNum) -> {
-            Film film = new Film();
-            film.setId(rs.getLong("film_id"));
-            film.setName(rs.getString("name"));
-            film.setDescription(rs.getString("description"));
-            film.setReleaseDate(rs.getDate("release_date").toLocalDate());
-            film.setDuration(rs.getInt("duration"));
-            // Создаем полный объект MpaRating, используя имя из JOIN запроса
-            MpaRating mpa = new MpaRating(rs.getLong("mpa_id"), rs.getString("mpa_name"));
-            film.setMpa(mpa);
-            // Жанры будут загружены отдельно методом getFilmGenres
-            return film;
-        };
+        return (rs, rowNum) -> Film.builder()
+                .id(rs.getLong("film_id"))
+                .name(rs.getString("name"))
+                .description(rs.getString("description"))
+                .releaseDate(rs.getDate("release_date").toLocalDate())
+                .duration(rs.getInt("duration"))
+                .mpa(new MpaRating(rs.getLong("mpa_id"), rs.getString("mpa_name"))) // Предполагаем int для mpa_id
+                .build();
     }
 
     // --- Методы для работы с жанрами фильма ---
@@ -256,5 +250,7 @@ public class FilmDbStorage implements FilmStorage {
         }, filmId);
     }
 }
+
+
 
 

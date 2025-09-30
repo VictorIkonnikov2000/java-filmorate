@@ -14,7 +14,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class GenreService {
 
-    private final @Qualifier("GenreDbStorage") GenreStorage genreStorage;
+    private final  GenreStorage genreStorage;
 
     public List<Genre> getAllGenres() {
         return genreStorage.getAllGenres();

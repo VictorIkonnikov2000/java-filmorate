@@ -12,8 +12,7 @@ import ru.yandex.practicum.filmorate.storage.MpaRatingDbStorage; // Исполь
 @Slf4j
 public class DataInitializer implements CommandLineRunner {
 
-    // В данном случае мы напрямую обращаемся к конкретным реализациям хранилищ,
-    // так как они содержат специфичные методы initializeIfEmpty().
+
     private final GenreDbStorage genreDbStorage;
     private final MpaRatingDbStorage mpaRatingDbStorage;
 
