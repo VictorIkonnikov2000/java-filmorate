@@ -23,10 +23,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class FilmService {
 
-    private final @Qualifier("FilmDbStorage") FilmStorage filmStorage;
-    private final @Qualifier("UserDbStorage") UserStorage userStorage; // Потребуется для проверки существования пользователя
-    private final @Qualifier("GenreDbStorage") GenreStorage genreStorage; // Потребуется для проверки существования жанра
-    private final @Qualifier("MpaRatingDbStorage") MpaRatingStorage mpaRatingStorage; // Потребуется для проверки существования MPA
+    private final  FilmStorage filmStorage;
+    private final  UserStorage userStorage; // Потребуется для проверки существования пользователя
+    private final  GenreStorage genreStorage; // Потребуется для проверки существования жанра
+    private final  MpaRatingStorage mpaRatingStorage; // Потребуется для проверки существования MPA
 
     // Минимальная дата релиза, перенесена из FilmController для централизованной валидации
     private static final LocalDate MIN_RELEASE_DATE = LocalDate.of(1895, 12, 28);
