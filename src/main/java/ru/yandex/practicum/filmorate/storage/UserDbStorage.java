@@ -102,25 +102,29 @@ public class UserDbStorage implements UserStorage {
         }
     }
 
+    /**
+     * Добавление друга. Теперь дружба хранится как две записи для взаимности.
+     */
     @Override
     public void addFriend(Long userId, Long friendId) {
         if (userId.equals(friendId)) {
             throw new ValidationException("Нельзя добавить самого себя в друзья.");
         }
 
-        getUserById(userId);
-        getUserById(friendId);
+        getUserById(userId); // Проверка существования пользователя
+        getUserById(friendId); // Проверка существования друга
 
-        // Проверяем, существует ли уже дружба в любом порядке.
-        // Используем OR для проверки обоих направлений.
+        // Проверяем, существует ли уже дружба в любом направлении (даже если только одна запись).
+        // Это предотвращает добавление дубликата, если по какой-то причине одна запись уже есть.
         String checkFriendshipSql = "SELECT COUNT(*) FROM friends WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)";
-        Integer existingFriendsCount = jdbcTemplate.queryForObject(checkFriendshipSql, Integer.class, userId, friendId, friendId, userId);
+        Integer existingFriendshipCount = jdbcTemplate.queryForObject(checkFriendshipSql, Integer.class, userId, friendId, friendId, userId);
 
-        if (existingFriendsCount != null && existingFriendsCount > 0) {
-            throw new ValidationException("Дружба между пользователями " + userId + " и " + friendId + " уже установлена.");
+        if (existingFriendshipCount != null && existingFriendshipCount > 0) {
+            log.warn("Попытка добавить существующую дружбу между {} и {}. Операция не требуется.", userId, friendId);
+            return; // Дружба уже существует, ничего не делаем.
         }
 
-        // Добавляем две записи о дружбе со статусом TRUE (взаимная)
+        // Добавляем две записи о дружбе, что подразумевает взаимное согласие сразу
         String insertSql = "INSERT INTO friends (user1_id, user2_id, status) VALUES (?, ?, true)";
         jdbcTemplate.update(insertSql, userId, friendId);
         jdbcTemplate.update(insertSql, friendId, userId); // Добавление обратной записи для взаимности
@@ -128,13 +132,6 @@ public class UserDbStorage implements UserStorage {
         log.info("Пользователи {} и {} теперь друзья.", userId, friendId);
     }
 
-
-    // Метод confirmFriendship теперь удален, так как дружба сразу становится подтвержденной.
-    // Класс FriendshipStatus также удален.
-
-    /**
-     * Удаление друга. Удаляет обе записи о взаимной дружбе.
-     */
     /**
      * Удаление друга. Удаляет обе записи о взаимной дружбе.
      */
@@ -143,7 +140,7 @@ public class UserDbStorage implements UserStorage {
         if (userId.equals(friendId)) {
             throw new ValidationException("Пользователь не может сам себя удалить из друзей.");
         }
-        getUserById(userId); // Предполагается, что этот метод выбрасывает NotFoundException, если пользователь не найден
+        getUserById(userId);
         getUserById(friendId);
 
         // Удаляем обе записи о взаимной дружбе
@@ -158,25 +155,23 @@ public class UserDbStorage implements UserStorage {
     }
 
 
-
     /**
      * Получить список друзей пользователя.
      * Поскольку дружба хранится как две записи (user1_id -> user2_id и user2_id -> user1_id),
-     * достаточно выбрать user2_id, где user1_id соответствует заданному userId.
+     * достаточно выбрать user2_id, где user1_id соответствует заданному userId, или user1_id, где user2_id соответствует заданному userId.
+     * Использование DISTINCT в SELECT помогает избежать дублирования, если по какой-то причине будет найдено более одной записи для одного и того же друга.
      */
     @Override
     public List<User> getFriends(Long userId) {
         getUserById(userId); // Проверить существование пользователя
 
-        // Если у вас таблица users имеет поле 'id', а не 'user_id'
-        // то используйте u.id
         String sql = "SELECT DISTINCT u.user_id, u.email, u.login, u.name, u.birthday " +
                 "FROM users AS u " +
                 "INNER JOIN friends AS f ON " +
-                "  (u.user_id = f.user2_id AND f.user1_id = ?) " + // userId добавил u.user_id
-                "  OR (u.user_id = f.user1_id AND f.user2_id = ?) "; // u.user_id добавил userId
+                "  (u.user_id = f.user2_id AND f.user1_id = ?) OR " + // Если user_id - это друг (user2_id) для данного userId (user1_id)
+                "  (u.user_id = f.user1_id AND f.user2_id = ?) " +   // Или user_id - это друг (user1_id) для данного userId (user2_id)
+                "WHERE f.status = TRUE"; // Учитываем только подтвержденные дружбы (поскольку ваш addFriend сразу делает status = true)
 
-        // Параметры для двух вопросительных знаков в O.R. условии
         return jdbcTemplate.query(sql, userRowMapper(), userId, userId);
     }
 
@@ -190,31 +185,18 @@ public class UserDbStorage implements UserStorage {
         getUserById(userId);
         getUserById(otherUserId);
 
-        String sql =
-                "SELECT DISTINCT u.user_id, u.email, u.login, u.name, u.birthday " +
-                        "FROM users AS u " +
-                        "WHERE u.user_id IN (" +
-                        "    SELECT f_u.user_id " +
-                        "    FROM users AS f_u " +
-                        "    JOIN friends AS f ON " +
-                        "        (f_u.user_id = f.user2_id AND f.user1_id = ?) OR " + // F_U - друг для userId
-                        "        (f_u.user_id = f.user1_id AND f.user2_id = ?) " +   // userId - друг для F_U
-                        "    WHERE f_u.user_id <> ?" + // Исключаем самого себя из списка друзей
-                        ")" +
-                        "AND u.user_id IN (" +
-                        "    SELECT f_o.user_id " +
-                        "    FROM users AS f_o " +
-                        "    JOIN friends AS f ON " +
-                        "        (f_o.user_id = f.user2_id AND f.user1_id = ?) OR " + // F_O - друг для otherUserId
-                        "        (f_o.user_id = f.user1_id AND f.user2_id = ?) " +   // otherUserId - друг для F_O
-                        "    WHERE f_o.user_id <> ?" + // Исключаем самого себя из списка друзей
-                        ")";
+        // Этот запрос находит пользователей, которые являются друзьями для обоих userId и otherUserId.
+        // Используем два подзапроса JOIN, чтобы найти друзей для каждого пользователя,
+        // затем пересекаем их, чтобы найти общих.
+        String sql = "SELECT DISTINCT u.user_id, u.email, u.login, u.name, u.birthday " +
+                "FROM users AS u " +
+                "INNER JOIN friends AS f1 ON (u.user_id = f1.user2_id AND f1.user1_id = ?) OR (u.user_id = f1.user1_id AND f1.user2_id = ?) " +
+                "INNER JOIN friends AS f2 ON (u.user_id = f2.user2_id AND f2.user1_id = ?) OR (u.user_id = f2.user1_id AND f2.user2_id = ?) " +
+                "WHERE f1.status = TRUE AND f2.status = TRUE"; // Учитываем только подтвержденные дружбы
 
-        // Параметры: userId (для первого OR), userId (для второго OR), userId (для первого where),
-        //           otherUserId (для третьего OR), otherUserId (для четвертого OR), otherUserId (для второго where)
         return jdbcTemplate.query(sql, userRowMapper(),
-                userId, userId, userId,
-                otherUserId, otherUserId, otherUserId);
+                userId, userId, // Параметры для f1: друга userId
+                otherUserId, otherUserId); // Параметры для f2: друга otherUserId
     }
 
 
@@ -226,17 +208,38 @@ public class UserDbStorage implements UserStorage {
     public List<User> getFriendsOfFriends(Long userId) {
         getUserById(userId);
 
-        String sql = "SELECT DISTINCT ff.user_id, ff.email, ff.login, ff.name, ff.birthday " +
-                "FROM users AS ff " + // Обозначаем "друзей друзей" как ff
-                "JOIN friends AS f1 ON ff.user_id = f1.user2_id " + // ff - друг для F1.user1_id
-                "JOIN friends AS f2 ON f1.user1_id = f2.user2_id " + // F1.user1_id - друг для userId (то есть, это прямой друг userId)
-                "WHERE f2.user1_id = ? " + // userId - наш начальный пользователь
-                "AND ff.user_id <> ? " + // Исключаем самого себя
-                "AND ff.user_id NOT IN (" + // Исключаем прямых друзей userId
-                "    SELECT direct_friend.user2_id FROM friends AS direct_friend WHERE direct_friend.user1_id = ?" +
+        // SQL для поиска друзей друзей:
+        // 1. Найти всех прямых друзей пользователя (f1).
+        // 2. Для каждого прямого друга (f1) найти его друзей (f2).
+        // 3. Результаты из (2) - это друзья друзей.
+        // 4. Исключить самого пользователя (u.user_id = userId).
+        // 5. Исключить прямых друзей пользователя (тот же список, что в (1)).
+        String sql = "SELECT DISTINCT fof.user_id, fof.email, fof.login, fof.name, fof.birthday " +
+                "FROM users AS u " + // Сам пользователь
+                "INNER JOIN friends AS uf ON (u.user_id = uf.user1_id AND uf.user2_id = ?) OR (u.user_id = uf.user2_id AND uf.user1_id = ?) " + // Дружба пользователя с его прямыми друзьями
+                "INNER JOIN users AS direct_friend ON direct_friend.user_id = CASE WHEN uf.user1_id = ? THEN uf.user2_id ELSE uf.user1_id END " + // Прямой друг
+                "INNER JOIN friends AS df_fof ON (direct_friend.user_id = df_fof.user1_id AND df_fof.user2_id = fof.user_id) OR (direct_friend.user_id = df_fof.user2_id AND df_fof.user1_id = fof.user_id) " + // Дружба прямого друга с другом друга
+                "INNER JOIN users AS fof ON fof.user_id = CASE WHEN df_fof.user1_id = direct_friend.user_id THEN df_fof.user2_id ELSE df_fof.user1_id END " + // Друг друга
+                "WHERE uf.status = TRUE AND df_fof.status = TRUE " + // Учитываем только подтвержденные дружбы
+                "AND fof.user_id <> ? " + // Исключаем самого пользователя
+                "AND fof.user_id NOT IN (" + // И исключаем прямых друзей пользователя
+                "    SELECT CASE WHEN f_dir.user1_id = ? THEN f_dir.user2_id ELSE f_dir.user1_id END " +
+                "    FROM friends AS f_dir " +
+                "    WHERE (f_dir.user1_id = ? OR f_dir.user2_id = ?) AND f_dir.status = TRUE" +
                 ")";
 
-        return jdbcTemplate.query(sql, userRowMapper(), userId, userId, userId);
+        // Параметры для sql:
+        // 1. uf.user2_id = ? -> userId
+        // 2. uf.user1_id = ? -> userId
+        // 3. direct_friend.user_id = CASE WHEN uf.user1_id = ? -> userId
+        // 4. fof.user_id <> ? -> userId
+        // 5. f_dir.user1_id = ? -> userId (для подзапроса исключения прямых друзей)
+        // 6. f_dir.user1_id = ? -> userId (для подзапроса)
+        // 7. f_dir.user2_id = ? -> userId (для подзапроса)
+        return jdbcTemplate.query(sql, userRowMapper(),
+                userId, userId, userId, // Для поиска прямых друзей и определения direct_friend
+                userId, // Для исключения самого пользователя
+                userId, userId, userId); // Для исключения прямых друзей
     }
 }
 

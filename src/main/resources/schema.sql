@@ -53,13 +53,13 @@ CREATE TABLE IF NOT EXISTS likes (
     FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS friends (
-    user1_id BIGINT NOT NULL,
-    user2_id BIGINT NOT NULL,
-    status BOOLEAN NOT NULL,
-    PRIMARY KEY (user1_id, user2_id),
-    FOREIGN KEY (user1_id) REFERENCES users (user_id) ON DELETE CASCADE,
-    FOREIGN KEY (user2_id) REFERENCES users (user_id) ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS user_friends (
+    user_id BIGINT REFERENCES users(user_id) ON DELETE CASCADE,
+    friend_id BIGINT REFERENCES users(user_id) ON DELETE CASCADE,
+    requested_at TIMESTAMP NOT NULL,
+    accepted_at TIMESTAMP, -- NULL, если запрос не подтвержден
+    initiator_id BIGINT REFERENCES users(user_id) ON DELETE CASCADE, -- кто отправил запрос
+    PRIMARY KEY (user_id, friend_id)
 );
 
 
