@@ -23,18 +23,12 @@ public class MpaRatingDbStorage implements MpaRatingStorage {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    /**
-     * Инициализирует стандартные MPA-рейтинги в базе данных, если таблица пуста.
-     * Этот метод должен быть вызван при старте приложения для заполнения справочных данных.
-     */
     public void initializeMpaRatingsIfEmpty() {
         log.info("Инициализация стандартных MPA-рейтингов в базе данных...");
-        // ВАЖНО: Изменено mpa_ratings на rating_mpa
-        Integer count = jdbcTemplate.queryForObject("SELECT count(*) FROM rating_mpa", Integer.class);
+        Integer count = jdbcTemplate.queryForObject("SELECT count(*) FROM mpa_ratings", Integer.class);
 
-        // Если таблица пуста (count равен null или 0), то добавляем стандартные рейтинги
         if (count == null || count == 0) {
-            log.info("Таблица rating_mpa пуста, начинаем добавление стандартных рейтингов.");
+            log.info("Таблица mpa_ratings пуста, начинаем добавление стандартных рейтингов.");
             addInitialMpaRating(new MpaRating(1L, "G"));
             addInitialMpaRating(new MpaRating(2L, "PG"));
             addInitialMpaRating(new MpaRating(3L, "PG-13"));
@@ -46,14 +40,8 @@ public class MpaRatingDbStorage implements MpaRatingStorage {
         }
     }
 
-    /**
-     * Добавляет один начальный MPA-рейтинг в базу данных, обрабатывая дубликаты.
-     * Этот метод предназначен для внутренней логики инициализации.
-     * @param mpaRating Объект MpaRating для добавления.
-     */
     private void addInitialMpaRating(MpaRating mpaRating) {
-        // SQL-запрос для вставки MPA-рейтинга с указанием его ID и имени
-        String sql = "INSERT INTO rating_mpa (id, name) VALUES (?, ?)"; // Этот запрос уже был правильным
+        String sql = "INSERT INTO mpa_ratings (mpa_id, name) VALUES (?, ?)";
         try {
             jdbcTemplate.update(sql, mpaRating.getId(), mpaRating.getName());
             log.info("Инициализирующий MPA-рейтинг добавлен: {} (ID: {})", mpaRating.getName(), mpaRating.getId());
@@ -65,42 +53,23 @@ public class MpaRatingDbStorage implements MpaRatingStorage {
         }
     }
 
-    /**
-     * Возвращает MPA-рейтинг по его целочисленному идентификатору.
-     * Метод для совместимости с интерфейсом, который мог использоваться ранее.
-     * @param id Идентификатор MPA-рейтинга.
-     * @return Объект MpaRating.
-     * @throws NotFoundException Если MPA-рейтинг с данным ID не найден.
-     */
+
     @Override
     public MpaRating getMpaRatingById(int id) {
         return getMpaById((long) id);
     }
 
-    /**
-     * Возвращает список всех MPA-рейтингов, хранящихся в базе данных.
-     * @return Список объектов MpaRating.
-     */
+
     @Override
     public List<MpaRating> getAllMpa() {
-        // SQL-запрос для получения всех MPA-рейтингов, отсортированных по их идентификатору.
-        // ВАЖНО: Изменено mpa_id на id и mpa_ratings на rating_mpa
-        String sql = "SELECT id, name FROM rating_mpa ORDER BY id";
+        String sql = "SELECT mpa_id, name FROM mpa_ratings ORDER BY mpa_id";
         return jdbcTemplate.query(sql, mpaRowMapper());
     }
 
-    /**
-     * Возвращает MPA-рейтинг по его идентификатору типа Long.
-     * Этот метод является основной точкой получения MPA-рейтинга по ID.
-     * @param id Идентификатор MPA-рейтинга.
-     * @return Объект MpaRating.
-     * @throws NotFoundException Если MPA-рейтинг с данным ID не найден в базе данных.
-     */
+
     @Override
     public MpaRating getMpaById(Long id) {
-        // SQL-запрос для получения MPA-рейтинга по его ID
-        // ВАЖНО: Изменено mpa_id на id и mpa_ratings на rating_mpa
-        String sql = "SELECT id, name FROM rating_mpa WHERE id = ?";
+        String sql = "SELECT mpa_id, name FROM mpa_ratings WHERE mpa_id = ?";
         try {
             return jdbcTemplate.queryForObject(sql, mpaRowMapper(), id);
         } catch (EmptyResultDataAccessException e) {
@@ -109,16 +78,12 @@ public class MpaRatingDbStorage implements MpaRatingStorage {
         }
     }
 
-    /**
-     * Создает RowMapper, который преобразует строку из ResultSet в объект MpaRating.
-     * @return Экземпляр RowMapper<MpaRating>.
-     */
+
     private RowMapper<MpaRating> mpaRowMapper() {
-        // Лямбда-выражение для RowMapper, которое считывает id и name из ResultSet
-        // ВАЖНО: Изменено mpa_id на id
-        return (rs, rowNum) -> new MpaRating(rs.getLong("id"), rs.getString("name"));
+        return (rs, rowNum) -> new MpaRating(rs.getLong("mpa_id"), rs.getString("name"));
     }
 }
+
 
 
 
