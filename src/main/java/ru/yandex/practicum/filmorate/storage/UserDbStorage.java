@@ -124,15 +124,10 @@ public class UserDbStorage implements UserStorage {
         if (userId.equals(friendId)) {
             throw new ValidationException("Нельзя добавить самого себя в друзья.");
         }
-        // Проверка существования пользователей
-        // Предполагается, что getUserById() бросает исключение, если пользователь не найден
+
         getUserById(userId);
         getUserById(friendId);
 
-        // 1. Проверяем, существует ли уже запись
-        // Обратите внимание, что мы ищем как (userId, friendId), так и (friendId, userId)
-        // Имена столбцов здесь ДОЛЖНЫ совпадать с вашей схемой БД.
-        // Я предполагаю, что в вашей БД это user1_id и user2_id
         String checkRelationsSql = "SELECT user1_id, user2_id, status FROM friends WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)";
 
         List<FriendshipStatus> existingRelations = jdbcTemplate.query(checkRelationsSql, (rs, rowNum) -> {
@@ -151,9 +146,7 @@ public class UserDbStorage implements UserStorage {
                     throw new ValidationException("Запрос на дружбу от пользователя " + userId + " к " + friendId + " уже ожидает подтверждения.");
                 }
             }
-            // Случай, когда friendId (requestor) уже отправил запрос userId (accepter)
-            // И теперь userId (accepter) пытается добавить friendId.
-            // Это означает подтверждение входящего запроса.
+
             if (relation.requesterId.equals(friendId) && relation.accepterId.equals(userId)) {
                 if (relation.isConfirmed) {
                     throw new ValidationException("Дружба между пользователем " + friendId + " и " + userId + " уже установлена.");
@@ -167,19 +160,12 @@ public class UserDbStorage implements UserStorage {
             }
         }
 
-        // Если дошли сюда, значит, не было ни существующей дружбы, ни ожидающих входящих запросов на подтверждение.
-        // Создаем новый исходящий запрос от userId к friendId со статусом 'false' (ожидает подтверждения).
         String insertSql = "INSERT INTO friends (user1_id, user2_id, status) VALUES (?, ?, false)"; // Используем user1_id и user2_id
         jdbcTemplate.update(insertSql, userId, friendId);
         log.info("Пользователь {} отправил запрос на дружбу пользователю {}", userId, friendId);
     }
 
 
-
-    /**
-     * Внутренний вспомогательный класс для представления статуса дружбы.
-     * Используется для более удобной обработки результатов запроса.
-     */
     private static class FriendshipStatus {
         Long requesterId;
         Long accepterId;
@@ -198,8 +184,6 @@ public class UserDbStorage implements UserStorage {
         getUserById(accepterId);
         getUserById(requesterId);
 
-        // Ищем запрос, где requesterId ОТПРАВЛЯЛ запрос accepterId.
-        // Это значит, что requesterId это user1_id, а accepterId это user2_id.
         String checkPendingSql = "SELECT user1_id, user2_id, status FROM friends WHERE user1_id = ? AND user2_id = ?";
 
         List<FriendshipStatus> existingRelations = jdbcTemplate.query(checkPendingSql, (rs, rowNum) -> {
@@ -220,23 +204,12 @@ public class UserDbStorage implements UserStorage {
             log.info("Дружба между {} и {} уже подтверждена.", requesterId, accepterId);
             throw new ValidationException("Дружба уже установлена.");
         } else {
-            // Если запрос существует и НЕ подтвержден (false)
-            // Обновляем статус существующего запроса на true
             String updateSql = "UPDATE friends SET status = true WHERE user1_id = ? AND user2_id = ?";
             jdbcTemplate.update(updateSql, requesterId, accepterId); // Обновляем именно запрос от requesterId к accepterId
             log.info("Пользователь {} подтвердил запрос от пользователя {}. Дружба установлена.", accepterId, requesterId);
         }
-        // Здесь НЕТ необходимости создавать "обратную запись", если ваша модель - одна запись для дружбы.
-        // Если "дружба" означает, что статус true в ОБОИХ направлениях, то ваша модель базы данных должна
-        // иметь две записи, или поле status должно быть в `friends` только для "pending" статуса.
-        // Я предполагаю, что одна запись с status=true означает взаимную дружбу.
-        // Если вам нужна отдельная запись для обратной связи, то нужно вставить:
-        // String insertReverseSql = "INSERT INTO friends (user1_id, user2_id, status) VALUES (?, ?, true)";
-        // jdbcTemplate.update(insertReverseSql, accepterId, requesterId);
-        // Но это уже сильно усложняет модель и потенциально потребует изменения addFriend, чтобы он тоже делал две записи.
-        // Пока остановимся на одной записи для дружбы.
-    }
 
+    }
 
     @Override
     public void removeFriend(Long userId, Long friendId) {
@@ -246,19 +219,9 @@ public class UserDbStorage implements UserStorage {
         getUserById(userId);
         getUserById(friendId);
 
-        // Удаляем запись, независимо от порядка user_id и friend_id.
-        // Предполагаем, что в таблице friends есть только ОДНА запись для пары userId и friendId.
-        // user1_id всегда меньше user2_id или другой порядок, который вы используете для вставки.
-        // В вашем случае, addFriend вставляет (userId, friendId) как (user1_id, user2_id).
-        // Поэтому удалять нужно ИМЕННО эту запись.
-
-        // Если ваша логика в addFriend ВСЕГДА вставляет (requesterId, accepterId) как (user1_id, user2_id),
-        // то удалять нужно именно ее.
         String deleteSql = "DELETE FROM friends WHERE (user1_id = ? AND user2_id = ?)";
         int deleted = jdbcTemplate.update(deleteSql, userId, friendId); // Удаляем запрос от userId к friendId
 
-        // А если дружба была инициирована friendId к userId?
-        // Тогда нужно удалить запись, где user1_id = friendId и user2_id = userId
         if (deleted == 0) { // Если не удалили прямую запись, попробуем удалить обратную
             deleteSql = "DELETE FROM friends WHERE (user1_id = ? AND user2_id = ?)";
             deleted = jdbcTemplate.update(deleteSql, friendId, userId); // Удаляем запрос от friendId к userId
@@ -270,8 +233,6 @@ public class UserDbStorage implements UserStorage {
         }
         log.info("Дружба или запрос на дружбу между пользователем {} и {} успешно удалены.", userId, friendId);
     }
-
-
 
     @Override
     public List<User> getFriends(Long userId) {
@@ -288,8 +249,6 @@ public class UserDbStorage implements UserStorage {
 
         return jdbcTemplate.query(sql, userRowMapper(), userId, userId); // Передаем userId дважды
     }
-
-
 
     @Override
     public List<User> getCommonFriends(Long userId, Long otherUserId) {
@@ -310,9 +269,6 @@ public class UserDbStorage implements UserStorage {
 
         return jdbcTemplate.query(sql, userRowMapper(), userId, userId, userId, otherUserId, otherUserId, otherUserId); // Передаем параметры в правильном порядке
     }
-
-
-
 
     @Override
     public List<User> getFriendsOfFriends(Long userId) {
@@ -350,11 +306,6 @@ public class UserDbStorage implements UserStorage {
 
         return jdbcTemplate.query(sql, userRowMapper(), userId, userId, userId, userId, userId);
     }
-
-    
-
-
-
 }
 
 
