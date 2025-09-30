@@ -55,7 +55,7 @@ public class MpaRatingDbStorage implements MpaRatingStorage {
      */
     private void addInitialMpaRating(MpaRating mpaRating) {
         // SQL-запрос для вставки MPA-рейтинга с указанием его ID и имени
-        String sql = "INSERT INTO mpa_ratings (mpa_id, name) VALUES (?, ?)";
+        String sql = "INSERT INTO rating_mpa (id, name) VALUES (?, ?)";
         try {
             jdbcTemplate.update(sql, mpaRating.getId(), mpaRating.getName());
             log.info("Инициализирующий MPA-рейтинг добавлен: {} (ID: {})", mpaRating.getName(), mpaRating.getId());

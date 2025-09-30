@@ -14,7 +14,6 @@ import ru.yandex.practicum.filmorate.validate.UserValidate;
 
 import java.sql.Date;
 import java.sql.PreparedStatement;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 
@@ -277,20 +276,6 @@ public class UserDbStorage implements UserStorage {
         throw new UnsupportedOperationException("Метод 'getFriendsOfFriends' еще не реализован.");
     }
 
-    public void initializeUsersIfEmpty() {
-        String checkSql = "SELECT COUNT(*) FROM users";
-        Integer count = jdbcTemplate.queryForObject(checkSql, Integer.class);
-        if (count == null || count == 0) {
-            // Нет пользователей, добавляем начальные данные (пример: администратор)
-            log.info("Начальная инициализация пользователей...");
-            String insertSql = "INSERT INTO users (email, login, name, birthday) VALUES (?, ?, ?, ?)";
-            jdbcTemplate.update(insertSql, "admin@example.com", "admin", "Администратор", LocalDate.of(1990, 1, 1));
-            jdbcTemplate.update(insertSql, "user@example.com", "user", "Пользователь", LocalDate.of(1995, 5, 10));
-            log.info("Начальная инициализация пользователей завершена.");
-        } else {
-            log.info("Пользователи уже существуют, инициализация пропущена.");
-        }
-    }
 }
 
 

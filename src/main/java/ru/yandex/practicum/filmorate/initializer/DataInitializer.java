@@ -6,7 +6,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.storage.GenreDbStorage; // Используем конкретную реализацию
 import ru.yandex.practicum.filmorate.storage.MpaRatingDbStorage; // Используем конкретную реализацию
-import ru.yandex.practicum.filmorate.storage.UserDbStorage;
+
 
 @Component
 @RequiredArgsConstructor
@@ -16,7 +16,7 @@ public class DataInitializer implements CommandLineRunner {
 
     private final GenreDbStorage genreDbStorage;
     private final MpaRatingDbStorage mpaRatingDbStorage;
-    private final UserDbStorage userDbStorage;
+
 
 
     @Override
@@ -25,7 +25,6 @@ public class DataInitializer implements CommandLineRunner {
         // Вызываем методы инициализации из соответствующих хранилищ
         mpaRatingDbStorage.initializeMpaRatingsIfEmpty();
         genreDbStorage.initializeGenresIfEmpty();
-        userDbStorage.initializeUsersIfEmpty();
         log.info("Инициализатор данных DataInitializer завершил работу.");
     }
 }
