@@ -108,19 +108,16 @@ public class UserDbStorage implements UserStorage {
             throw new ValidationException("Нельзя добавить самого себя в друзья.");
         }
 
-        // Проверяем существование пользователей
         getUserById(userId);
         getUserById(friendId);
 
         // Проверяем, существует ли уже дружба в любом порядке.
-        // Достаточно проверки в одном направлении, т.к. при добавлении мы всегда создаем две записи.
-        String checkFriendshipSql = "SELECT COUNT(*) FROM friends WHERE user1_id = ? AND user2_id = ?";
-        Integer existingFriendsCount = jdbcTemplate.queryForObject(checkFriendshipSql, Integer.class, userId, friendId);
+        // Используем OR для проверки обоих направлений.
+        String checkFriendshipSql = "SELECT COUNT(*) FROM friends WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)";
+        Integer existingFriendsCount = jdbcTemplate.queryForObject(checkFriendshipSql, Integer.class, userId, friendId, friendId, userId);
 
         if (existingFriendsCount != null && existingFriendsCount > 0) {
             throw new ValidationException("Дружба между пользователями " + userId + " и " + friendId + " уже установлена.");
-            // Если бы мы хотели обрабатывать существующий запрос с status=false,
-            // логика была бы сложнее, но по условию, дружба сразу взаимная.
         }
 
         // Добавляем две записи о дружбе со статусом TRUE (взаимная)
@@ -131,9 +128,13 @@ public class UserDbStorage implements UserStorage {
         log.info("Пользователи {} и {} теперь друзья.", userId, friendId);
     }
 
+
     // Метод confirmFriendship теперь удален, так как дружба сразу становится подтвержденной.
     // Класс FriendshipStatus также удален.
 
+    /**
+     * Удаление друга. Удаляет обе записи о взаимной дружбе.
+     */
     /**
      * Удаление друга. Удаляет обе записи о взаимной дружбе.
      */
@@ -142,19 +143,20 @@ public class UserDbStorage implements UserStorage {
         if (userId.equals(friendId)) {
             throw new ValidationException("Пользователь не может сам себя удалить из друзей.");
         }
-        getUserById(userId);
+        getUserById(userId); // Предполагается, что этот метод выбрасывает NotFoundException, если пользователь не найден
         getUserById(friendId);
 
-        // Удаляем только одну запись, чтобы разорвать дружбу только в одном направлении.
-        String deleteSql = "DELETE FROM friends WHERE user1_id = ? AND user2_id = ?";
-        int deletedRows = jdbcTemplate.update(deleteSql, userId, friendId);
+        // Удаляем обе записи о взаимной дружбе
+        String deleteSql = "DELETE FROM friends WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)";
+        int deletedRows = jdbcTemplate.update(deleteSql, userId, friendId, friendId, userId);
 
-        if (deletedRows == 0) {
+        if (deletedRows == 0) { // Если не было удалено ни одной записи
             log.warn("Не найдено дружбы между пользователем {} и {}.", userId, friendId);
-
+        } else { // Если удалена как минимум одна запись (в идеале две)
+            log.info("Взаимная дружба между пользователем {} и {} разорвана. Удалено {} записей.", userId, friendId, deletedRows);
         }
-        log.info("Пользователь {} удалил из друзей пользователя {}.", userId, friendId);
     }
+
 
 
     /**
