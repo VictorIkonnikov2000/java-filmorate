@@ -1,24 +1,23 @@
 package ru.yandex.practicum.filmorate.storage;
 
-import lombok.extern.slf4j.Slf4j; // Используем Slf4j для логирования
-import org.springframework.beans.factory.annotation.Autowired; // Для автоматического внедрения зависимостей
-import org.springframework.dao.DuplicateKeyException; // Для обработки случаев, когда элемент с таким ID уже есть
-import org.springframework.dao.EmptyResultDataAccessException; // Для обработки случаев, когда запрос не возвращает строк
-import org.springframework.jdbc.core.JdbcTemplate; // Компонент Spring для работы с базой данных
-import org.springframework.jdbc.core.RowMapper; // Интерфейс для маппинга строк результата запроса в объекты
-import org.springframework.stereotype.Component; // Аннотация, указывающая, что класс является компонентом Spring
-import ru.yandex.practicum.filmorate.exception.NotFoundException; // Кастомное исключение для ненаходимых объектов
-import ru.yandex.practicum.filmorate.model.MpaRating; // Модель данных для MPA рейтинга
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.stereotype.Component;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.model.MpaRating;
 
-import java.util.List; // Для работы со списками объектов
+import java.util.List;
 
-@Slf4j // Аннотация Lombok для автоматического создания логгера
-@Component("MpaRatingDbStorage") // Компонент Spring с указанием имени
+@Slf4j
+@Component("MpaRatingDbStorage")
 public class MpaRatingDbStorage implements MpaRatingStorage {
 
-    private final JdbcTemplate jdbcTemplate; // Поле для работы с базой данных
+    private final JdbcTemplate jdbcTemplate;
 
-    // Конструктор с автоматическим внедрением JdbcTemplate
     @Autowired
     public MpaRatingDbStorage(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
@@ -30,13 +29,12 @@ public class MpaRatingDbStorage implements MpaRatingStorage {
      */
     public void initializeMpaRatingsIfEmpty() {
         log.info("Инициализация стандартных MPA-рейтингов в базе данных...");
-        // Проверяем количество записей в таблице mpa_ratings
-        Integer count = jdbcTemplate.queryForObject("SELECT count(*) FROM mpa_ratings", Integer.class);
+        // ВАЖНО: Изменено mpa_ratings на rating_mpa
+        Integer count = jdbcTemplate.queryForObject("SELECT count(*) FROM rating_mpa", Integer.class);
 
         // Если таблица пуста (count равен null или 0), то добавляем стандартные рейтинги
         if (count == null || count == 0) {
-            log.info("Таблица mpa_ratings пуста, начинаем добавление стандартных рейтингов.");
-            // Добавляем каждый MPA-рейтинг с явно указанным ID
+            log.info("Таблица rating_mpa пуста, начинаем добавление стандартных рейтингов.");
             addInitialMpaRating(new MpaRating(1L, "G"));
             addInitialMpaRating(new MpaRating(2L, "PG"));
             addInitialMpaRating(new MpaRating(3L, "PG-13"));
@@ -55,15 +53,13 @@ public class MpaRatingDbStorage implements MpaRatingStorage {
      */
     private void addInitialMpaRating(MpaRating mpaRating) {
         // SQL-запрос для вставки MPA-рейтинга с указанием его ID и имени
-        String sql = "INSERT INTO rating_mpa (id, name) VALUES (?, ?)";
+        String sql = "INSERT INTO rating_mpa (id, name) VALUES (?, ?)"; // Этот запрос уже был правильным
         try {
             jdbcTemplate.update(sql, mpaRating.getId(), mpaRating.getName());
             log.info("Инициализирующий MPA-рейтинг добавлен: {} (ID: {})", mpaRating.getName(), mpaRating.getId());
         } catch (DuplicateKeyException e) {
-            // Если рейтинг с таким ID уже существует, логируем предупреждение
             log.warn("MPA-рейтинг с ID {} уже существует в базе данных: {}", mpaRating.getId(), mpaRating.getName());
         } catch (Exception e) {
-            // Логируем любые другие ошибки при вставке
             log.error("Ошибка при добавлении инициализирующего MPA-рейтинга {} (ID: {}): {}",
                     mpaRating.getName(), mpaRating.getId(), e.getMessage());
         }
@@ -78,7 +74,6 @@ public class MpaRatingDbStorage implements MpaRatingStorage {
      */
     @Override
     public MpaRating getMpaRatingById(int id) {
-        // Делегируем вызов другому методу, который работает с Long ID и выбрасывает исключение при ненаходке
         return getMpaById((long) id);
     }
 
@@ -89,8 +84,8 @@ public class MpaRatingDbStorage implements MpaRatingStorage {
     @Override
     public List<MpaRating> getAllMpa() {
         // SQL-запрос для получения всех MPA-рейтингов, отсортированных по их идентификатору.
-        String sql = "SELECT mpa_id, name FROM mpa_ratings ORDER BY mpa_id";
-        // Выполняем запрос и маппим каждую строку результата в объект MpaRating
+        // ВАЖНО: Изменено mpa_id на id и mpa_ratings на rating_mpa
+        String sql = "SELECT id, name FROM rating_mpa ORDER BY id";
         return jdbcTemplate.query(sql, mpaRowMapper());
     }
 
@@ -104,13 +99,11 @@ public class MpaRatingDbStorage implements MpaRatingStorage {
     @Override
     public MpaRating getMpaById(Long id) {
         // SQL-запрос для получения MPA-рейтинга по его ID
-        String sql = "SELECT mpa_id, name FROM mpa_ratings WHERE mpa_id = ?";
+        // ВАЖНО: Изменено mpa_id на id и mpa_ratings на rating_mpa
+        String sql = "SELECT id, name FROM rating_mpa WHERE id = ?";
         try {
-            // Выполняем запрос, ожидая один объект MpaRating.
-            // Если объект не найден, queryForObject выбрасывает EmptyResultDataAccessException.
             return jdbcTemplate.queryForObject(sql, mpaRowMapper(), id);
         } catch (EmptyResultDataAccessException e) {
-            // В случае отсутствия MPA-рейтинга, логируем предупреждение и выбрасываем кастомное исключение.
             log.warn("MPA rating with id {} not found in the database.", id);
             throw new NotFoundException("MPA rating with id " + id + " not found.");
         }
@@ -121,10 +114,12 @@ public class MpaRatingDbStorage implements MpaRatingStorage {
      * @return Экземпляр RowMapper<MpaRating>.
      */
     private RowMapper<MpaRating> mpaRowMapper() {
-        // Лямбда-выражение для RowMapper, которое считывает mpa_id и name из ResultSet
-        return (rs, rowNum) -> new MpaRating(rs.getLong("mpa_id"), rs.getString("name"));
+        // Лямбда-выражение для RowMapper, которое считывает id и name из ResultSet
+        // ВАЖНО: Изменено mpa_id на id
+        return (rs, rowNum) -> new MpaRating(rs.getLong("id"), rs.getString("name"));
     }
 }
+
 
 
 
