@@ -27,8 +27,7 @@ public class UserDbStorage implements UserStorage {
     public UserDbStorage(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
-
-
+    
     private RowMapper<User> userRowMapper() {
         return (rs, rowNum) -> User.builder()
                 .id(rs.getLong("user_id"))
