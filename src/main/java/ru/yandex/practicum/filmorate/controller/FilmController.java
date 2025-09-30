@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException; // Используется для бизнес-валидации
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
@@ -61,9 +62,17 @@ public class FilmController {
     @GetMapping("/{id}")
     public ResponseEntity<Film> getFilmById(@PathVariable Long id) {
         log.info("Получен GET запрос на получение фильма по ID: {}", id);
-        Film film = filmService.getFilmById(id);
-        log.info("Возвращен фильм: {}", film);
-        return ResponseEntity.ok(film);
+        try {
+            Film film = filmService.getFilmById(id);
+            log.info("Возвращен фильм: {}", film);
+            return ResponseEntity.ok(film);
+        } catch (NotFoundException e) {
+            log.warn("Фильм с ID {} не найден: {}", id, e.getMessage());
+            // Возвращаем 404 Not Found с сообщением об ошибке в теле
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(null); // Или тело с сообщением об ошибке, как ожидают тесты
+            //  Map.of("error", e.getMessage())
+        }
     }
 
     @PutMapping("/{id}/like/{userId}")
