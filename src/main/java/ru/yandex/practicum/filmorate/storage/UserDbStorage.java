@@ -190,14 +190,33 @@ public class UserDbStorage implements UserStorage {
         getUserById(userId);
         getUserById(otherUserId);
 
-        String sql = "SELECT u.user_id, u.email, u.login, u.name, u.birthday " +
-                "FROM users AS u " +
-                "JOIN friends AS f1 ON u.user_id = f1.user2_id " + // u - друг для userId
-                "JOIN friends AS f2 ON u.user_id = f2.user2_id " + // u - друг для otherUserId
-                "WHERE f1.user1_id = ? AND f2.user1_id = ?";
+        String sql =
+                "SELECT DISTINCT u.user_id, u.email, u.login, u.name, u.birthday " +
+                        "FROM users AS u " +
+                        "WHERE u.user_id IN (" +
+                        "    SELECT f_u.user_id " +
+                        "    FROM users AS f_u " +
+                        "    JOIN friends AS f ON " +
+                        "        (f_u.user_id = f.user2_id AND f.user1_id = ?) OR " + // F_U - друг для userId
+                        "        (f_u.user_id = f.user1_id AND f.user2_id = ?) " +   // userId - друг для F_U
+                        "    WHERE f_u.user_id <> ?" + // Исключаем самого себя из списка друзей
+                        ")" +
+                        "AND u.user_id IN (" +
+                        "    SELECT f_o.user_id " +
+                        "    FROM users AS f_o " +
+                        "    JOIN friends AS f ON " +
+                        "        (f_o.user_id = f.user2_id AND f.user1_id = ?) OR " + // F_O - друг для otherUserId
+                        "        (f_o.user_id = f.user1_id AND f.user2_id = ?) " +   // otherUserId - друг для F_O
+                        "    WHERE f_o.user_id <> ?" + // Исключаем самого себя из списка друзей
+                        ")";
 
-        return jdbcTemplate.query(sql, userRowMapper(), userId, otherUserId);
+        // Параметры: userId (для первого OR), userId (для второго OR), userId (для первого where),
+        //           otherUserId (для третьего OR), otherUserId (для четвертого OR), otherUserId (для второго where)
+        return jdbcTemplate.query(sql, userRowMapper(),
+                userId, userId, userId,
+                otherUserId, otherUserId, otherUserId);
     }
+
 
     /**
      * Получить список друзей друзей пользователя.
