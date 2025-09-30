@@ -151,7 +151,8 @@ public class UserDbStorage implements UserStorage {
         Optional<Boolean> pendingExistence = Optional.empty();
         try {
             pendingExistence = Optional.ofNullable(jdbcTemplate.queryForObject(checkPendingSql, Boolean.class, requesterId, accepterId));
-        } catch (EmptyResultDataAccessException ignored) {}
+        } catch (EmptyResultDataAccessException ignored) {
+        }
 
         if (pendingExistence.isPresent()) {
             if (pendingExistence.get()) { // status = true
@@ -176,7 +177,8 @@ public class UserDbStorage implements UserStorage {
         Optional<Boolean> symmetricExistence = Optional.empty();
         try {
             symmetricExistence = Optional.ofNullable(jdbcTemplate.queryForObject(checkSymmetricSql, Boolean.class, accepterId, requesterId));
-        } catch (EmptyResultDataAccessException ignored) {}
+        } catch (EmptyResultDataAccessException ignored) {
+        }
 
         if (symmetricExistence.isEmpty() || !symmetricExistence.get()) {
             // Если симметричной записи нет или она не true, создаем/обновляем её.
