@@ -29,7 +29,7 @@ public class GenreDbStorage implements GenreStorage {
     public GenreDbStorage(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
-
+    //Новый
     public void initializeGenresIfEmpty() {
         log.info("Инициализация стандартных жанров в базе данных...");
         List<Genre> genres = getAllGenres();
