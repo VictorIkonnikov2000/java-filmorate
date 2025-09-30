@@ -32,20 +32,16 @@ public class UserController {
      * выброшенные методами контроллера, и обрабатывать их единообразно.
      */
     @ExceptionHandler(NotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND) // Указываем, что этот обработчик должен возвращать 404
+    @ResponseStatus(HttpStatus.NOT_FOUND)
     public Map<String, String> handleNotFoundException(NotFoundException e) {
-        log.warn("Обработано исключение NotFoundException: {}", e.getMessage());
+        log.error("Resource not found: {}", e.getMessage());
         return Map.of("error", e.getMessage());
     }
 
-    /**
-     * Обработчик исключения ValidationException.
-     * Возвращает HTTP статус 400 BAD_REQUEST с сообщением об ошибке.
-     */
     @ExceptionHandler(ValidationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Map<String, String> handleValidationException(ValidationException e) {
-        log.warn("Обработано исключение ValidationException: {}", e.getMessage());
+        log.error("Validation error: {}", e.getMessage());
         return Map.of("error", e.getMessage());
     }
 
@@ -121,6 +117,7 @@ public class UserController {
         // NotFoundException будет автоматически перехвачено @ExceptionHandler
         return userService.getUserById(id); // Возвращает 200 OK
     }
+
 }
 
 
