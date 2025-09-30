@@ -29,7 +29,7 @@ public class GenreDbStorage implements GenreStorage {
     public GenreDbStorage(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
-    //Новый
+
     public void initializeGenresIfEmpty() {
         log.info("Инициализация стандартных жанров в базе данных...");
         List<Genre> genres = getAllGenres();
@@ -90,6 +90,7 @@ public class GenreDbStorage implements GenreStorage {
     /**
      * Создает RowMapper для преобразования ResultSet в объект Genre.
      * Исправлено: получение ID из столбца 'id'
+     *
      * @return RowMapper<Genre>
      */
     private RowMapper<Genre> genreRowMapper() {
