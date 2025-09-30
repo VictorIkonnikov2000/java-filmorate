@@ -15,8 +15,6 @@ import ru.yandex.practicum.filmorate.validate.UserValidate;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
-import java.sql.Timestamp;
-import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
@@ -104,132 +102,139 @@ public class UserDbStorage implements UserStorage {
         }
     }
 
-    /**
-     * Добавление друга. Теперь дружба хранится как две записи для взаимности.
-     */
     @Override
     public void addFriend(Long userId, Long friendId) {
         if (userId.equals(friendId)) {
             throw new ValidationException("Нельзя добавить самого себя в друзья.");
         }
 
-        getUserById(userId); // Проверка существования пользователя
-        getUserById(friendId); // Проверка существования друга
+        getUserById(userId);
+        getUserById(friendId);
 
-        // Проверяем, существует ли уже запрос на дружбу в любом направлении.
-        String checkRequestSql = "SELECT COUNT(*) FROM friends WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)";
-        Integer existingRequestCount = jdbcTemplate.queryForObject(checkRequestSql, Integer.class, userId, friendId, friendId, userId);
+        // Проверяем, существует ли уже дружба в любом порядке.
+        // Используем OR для проверки обоих направлений.
+        String checkFriendshipSql = "SELECT COUNT(*) FROM friends WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)";
+        Integer existingFriendsCount = jdbcTemplate.queryForObject(checkFriendshipSql, Integer.class, userId, friendId, friendId, userId);
 
-        if (existingRequestCount != null && existingRequestCount > 0) {
-            log.warn("Попытка добавить существующий запрос на дружбу между {} и {}. Операция не требуется.", userId, friendId);
-            return; // Запрос уже существует, ничего не делаем.
+        if (existingFriendsCount != null && existingFriendsCount > 0) {
+            throw new ValidationException("Дружба между пользователями " + userId + " и " + friendId + " уже установлена.");
         }
 
-        // Отправляем запрос на дружбу.  initiator_id - инициатор запроса (тот, кто отправляет запрос в друзья).
-        String insertSql = "INSERT INTO friends (user_id, friend_id, requested_at, initiator_id) VALUES (?, ?, ?, ?)";
-        jdbcTemplate.update(insertSql, userId, friendId, Timestamp.from(Instant.now()), userId);
+        // Добавляем две записи о дружбе со статусом TRUE (взаимная)
+        String insertSql = "INSERT INTO friends (user1_id, user2_id, status) VALUES (?, ?, true)";
+        jdbcTemplate.update(insertSql, userId, friendId);
+        jdbcTemplate.update(insertSql, friendId, userId); // Добавление обратной записи для взаимности
 
-        log.info("Пользователь {} отправил запрос на дружбу пользователю {}.", userId, friendId);
+        log.info("Пользователи {} и {} теперь друзья.", userId, friendId);
     }
 
+
+    // Метод confirmFriendship теперь удален, так как дружба сразу становится подтвержденной.
+    // Класс FriendshipStatus также удален.
+
     /**
-     * Подтверждение запроса на добавление в друзья.
+     * Удаление друга. Удаляет обе записи о взаимной дружбе.
      */
-    public void confirmFriend(Long userId, Long friendId) {
-        getUserById(userId); // Проверка существования пользователя
-        getUserById(friendId); // Проверка существования друга
-
-        // Проверяем, существует ли запрос на дружбу от userId к friendId.
-        String checkRequestSql = "SELECT COUNT(*) FROM friends WHERE user_id = ? AND friend_id = ? AND accepted_at IS NULL";
-        Integer existingRequestCount = jdbcTemplate.queryForObject(checkRequestSql, Integer.class, userId, friendId);
-
-        if (existingRequestCount == null || existingRequestCount == 0) {
-            log.warn("Не найден запрос на дружбу от пользователя {} к пользователю {}. Подтверждение невозможно.", userId, friendId);
-            throw new NotFoundException("Не найден запрос на дружбу от пользователя " + userId + " к пользователю " + friendId + ". Подтверждение невозможно.");
-
-        }
-
-        // Подтверждаем запрос на дружбу, устанавливая accepted_at.
-        String updateSql = "UPDATE friends SET accepted_at = ? WHERE user_id = ? AND friend_id = ?";
-        jdbcTemplate.update(updateSql, Timestamp.from(Instant.now()), userId, friendId);
-
-        log.info("Пользователь {} подтвердил запрос на дружбу от пользователя {}.", friendId, userId);
-    }
-
     /**
-     * Удаление из друзей (удаление запроса или факта дружбы).
+     * Удаление друга. Удаляет обе записи о взаимной дружбе.
      */
     @Override
     public void removeFriend(Long userId, Long friendId) {
         if (userId.equals(friendId)) {
             throw new ValidationException("Пользователь не может сам себя удалить из друзей.");
         }
-        getUserById(userId);
+        getUserById(userId); // Предполагается, что этот метод выбрасывает NotFoundException, если пользователь не найден
         getUserById(friendId);
 
-        // Проверяем, есть ли вообще какие-либо записи о дружбе между пользователями в любом направлении.
+        // Удаляем обе записи о взаимной дружбе
+        String deleteSql = "DELETE FROM friends WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)";
+        int deletedRows = jdbcTemplate.update(deleteSql, userId, friendId, friendId, userId);
 
-        String checkFriendshipSql = "SELECT COUNT(*) FROM friends WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)";
-        Integer existingFriendshipCount = jdbcTemplate.queryForObject(checkFriendshipSql, Integer.class, userId, friendId, friendId, userId);
-
-        if (existingFriendshipCount == null || existingFriendshipCount == 0) {
-            log.warn("Между пользователями {} и {} нет записей о дружбе. Удаление невозможно.", userId, friendId);
-            return; // Нет записей о дружбе, удалять нечего.
+        if (deletedRows == 0) { // Если не было удалено ни одной записи
+            log.warn("Не найдено дружбы между пользователем {} и {}.", userId, friendId);
+        } else { // Если удалена как минимум одна запись (в идеале две)
+            log.info("Взаимная дружба между пользователем {} и {} разорвана. Удалено {} записей.", userId, friendId, deletedRows);
         }
-
-        // Пытаемся удалить запись, где userId инициировал запрос к friendId.
-        String deleteSql = "DELETE FROM friends WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)";
-
-        int deletedRows = jdbcTemplate.update(deleteSql, userId, friendId, friendId ,userId);
-
-        log.info("Удалена дружба (или запрос) между пользователями {} и {}. Удалено {} записей.", userId, friendId, deletedRows);
     }
 
+
+
     /**
-     * Получить список друзей пользователя (только подтвержденных).
+     * Получить список друзей пользователя.
+     * Поскольку дружба хранится как две записи (user1_id -> user2_id и user2_id -> user1_id),
+     * достаточно выбрать user2_id, где user1_id соответствует заданному userId.
      */
     @Override
     public List<User> getFriends(Long userId) {
         getUserById(userId); // Проверить существование пользователя
 
-        String sql = "SELECT u.user_id, u.email, u.login, u.name, u.birthday " +
+        // Если у вас таблица users имеет поле 'id', а не 'user_id'
+        // то используйте u.id
+        String sql = "SELECT DISTINCT u.user_id, u.email, u.login, u.name, u.birthday " +
                 "FROM users AS u " +
-                "INNER JOIN friends AS f ON u.user_id = f.friend_id " + // Находим всех, кто является другом для user_id
-                "WHERE f.user_id = ? AND f.accepted_at IS NOT NULL"; // Фильтруем только подтвержденные дружбы
+                "INNER JOIN friends AS f ON " +
+                "  (u.user_id = f.user2_id AND f.user1_id = ?) " + // userId добавил u.user_id
+                "  OR (u.user_id = f.user1_id AND f.user2_id = ?) "; // u.user_id добавил userId
 
-        return jdbcTemplate.query(sql, userRowMapper(), userId);
+        // Параметры для двух вопросительных знаков в O.R. условии
+        return jdbcTemplate.query(sql, userRowMapper(), userId, userId);
     }
+
 
     /**
      * Получить список общих друзей между двумя пользователями.
+     * Общие друзья - это те, кто является другом и для userId, и для otherUserId.
      */
     @Override
     public List<User> getCommonFriends(Long userId, Long otherUserId) {
         getUserById(userId);
         getUserById(otherUserId);
 
-        String sql = "SELECT u.user_id, u.email, u.login, u.name, u.birthday " +
-                "FROM users AS u " +
-                "INNER JOIN friends AS f1 ON u.user_id = f1.friend_id AND f1.accepted_at IS NOT NULL " +
-                "INNER JOIN friends AS f2 ON u.user_id = f2.friend_id AND f2.accepted_at IS NOT NULL " +
-                "WHERE f1.user_id = ? AND f2.user_id = ?";
+        String sql =
+                "SELECT DISTINCT u.user_id, u.email, u.login, u.name, u.birthday " +
+                        "FROM users AS u " +
+                        "WHERE u.user_id IN (" +
+                        "    SELECT f_u.user_id " +
+                        "    FROM users AS f_u " +
+                        "    JOIN friends AS f ON " +
+                        "        (f_u.user_id = f.user2_id AND f.user1_id = ?) OR " + // F_U - друг для userId
+                        "        (f_u.user_id = f.user1_id AND f.user2_id = ?) " +   // userId - друг для F_U
+                        "    WHERE f_u.user_id <> ?" + // Исключаем самого себя из списка друзей
+                        ")" +
+                        "AND u.user_id IN (" +
+                        "    SELECT f_o.user_id " +
+                        "    FROM users AS f_o " +
+                        "    JOIN friends AS f ON " +
+                        "        (f_o.user_id = f.user2_id AND f.user1_id = ?) OR " + // F_O - друг для otherUserId
+                        "        (f_o.user_id = f.user1_id AND f.user2_id = ?) " +   // otherUserId - друг для F_O
+                        "    WHERE f_o.user_id <> ?" + // Исключаем самого себя из списка друзей
+                        ")";
 
-        return jdbcTemplate.query(sql, userRowMapper(), userId, otherUserId);
+        // Параметры: userId (для первого OR), userId (для второго OR), userId (для первого where),
+        //           otherUserId (для третьего OR), otherUserId (для четвертого OR), otherUserId (для второго where)
+        return jdbcTemplate.query(sql, userRowMapper(),
+                userId, userId, userId,
+                otherUserId, otherUserId, otherUserId);
     }
+
 
     /**
      * Получить список друзей друзей пользователя.
+     * Исключаются сам пользователь и его прямые друзья.
      */
     @Override
     public List<User> getFriendsOfFriends(Long userId) {
         getUserById(userId);
 
-        String sql = "SELECT u.user_id, u.email, u.login, u.name, u.birthday " +
-                "FROM users AS u " +
-                "INNER JOIN friends AS f ON u.user_id = f.friend_id AND f.accepted_at IS NOT NULL " +
-                "WHERE f.user_id IN (SELECT f2.friend_id FROM friends AS f2 WHERE f2.user_id = ? AND f2.accepted_at IS NOT NULL) " +
-                "AND u.user_id <> ? " +
-                "AND u.user_id NOT IN (SELECT f3.friend_id FROM friends AS f3 WHERE f3.user_id = ? AND f3.accepted_at IS NOT NULL)";
+        String sql = "SELECT DISTINCT ff.user_id, ff.email, ff.login, ff.name, ff.birthday " +
+                "FROM users AS ff " + // Обозначаем "друзей друзей" как ff
+                "JOIN friends AS f1 ON ff.user_id = f1.user2_id " + // ff - друг для F1.user1_id
+                "JOIN friends AS f2 ON f1.user1_id = f2.user2_id " + // F1.user1_id - друг для userId (то есть, это прямой друг userId)
+                "WHERE f2.user1_id = ? " + // userId - наш начальный пользователь
+                "AND ff.user_id <> ? " + // Исключаем самого себя
+                "AND ff.user_id NOT IN (" + // Исключаем прямых друзей userId
+                "    SELECT direct_friend.user2_id FROM friends AS direct_friend WHERE direct_friend.user1_id = ?" +
+                ")";
 
         return jdbcTemplate.query(sql, userRowMapper(), userId, userId, userId);
     }
