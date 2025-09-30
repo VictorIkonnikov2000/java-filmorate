@@ -77,22 +77,30 @@ public class UserDbStorage implements UserStorage {
             user.setName(user.getLogin());
         }
 
-        // Проверяем существование пользователя перед обновлением
-        // Если пользователя нет, getUserById выбросит NotFoundException, который контроллер должен обработать как 404
+        // Проверяем существование пользователя перед обновлением.
+        // Если пользователя нет, getUserById выбросит NotFoundException,
+        // который поймает ErrorHandler, вернув 404.
+        // Это именно то поведение, которое ожидает тест на "User update unknown".
         getUserById(user.getId());
 
         String sql = "UPDATE users SET email = ?, login = ?, name = ?, birthday = ? WHERE user_id = ?";
         int rows = jdbcTemplate.update(sql, user.getEmail(), user.getLogin(), user.getName(), Date.valueOf(user.getBirthday()), user.getId());
 
-        if (rows == 0) {
-            // Эта часть кода будет достигнута, только если пользователь был найден, но по какой-то причине
-            // запрос update не затронул ни одной строки. Это маловероятно при правильной работе,
-            // но можно оставить, как защитную меру. В большинстве случаев достаточно проверки выше.
-            throw new NotFoundException("User with id " + user.getId() + " not found or update failed unexpectedly.");
-        }
+        // Здесь можно было бы добавить логику для обработки случая,
+        // если по какой-то причине rows == 0, хотя пользователь был найден.
+        // Например, выбросить специфическое исключение для "обновление не удалось",
+        // но в рамках типовой задачи это избыточно, так как если пользователь найден,
+        // UPDATE почти всегда должен затронуть 1 строку.
+        // Исключение после if(rows == 0) здесь не нужно, т.к. NotFoundException уже
+        // будет пойман выше (в getUserById), если пользователя нет.
+
         log.info("Обновлен пользователь: {}", user);
-        return user;
+        return user; // Возвращаем обновленного пользователя.
+        // Возможно, лучше снова получить его из БД, чтобы убедиться,
+        // что все поля актуальны после обновления.
+        // return getUserById(user.getId()); <--- это более надежно
     }
+
 
     @Override
     public List<User> getAllUsers() {

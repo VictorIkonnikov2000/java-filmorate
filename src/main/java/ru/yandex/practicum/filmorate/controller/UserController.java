@@ -57,15 +57,9 @@ public class UserController {
     @PutMapping
     public ResponseEntity<User> updateUser(@RequestBody User user) {
         log.info("Получен запрос PUT /users с телом: {}", user);
-        // NotFoundException и ValidationException будут автоматически перехвачены @ExceptionHandler
-        // Общие исключения можно дополнительно отлавливать, если они не покрываются другими обработчиками
-        try {
-            User updatedUser = userService.updateUser(user);
-            return new ResponseEntity<>(updatedUser, HttpStatus.OK);
-        } catch (Exception e) { // Отлавливаем любые другие неожиданные исключения
-            log.error("Произошла неожиданная ошибка при обновлении пользователя: {}", e.getMessage(), e);
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        // NotFoundException и ValidationException теперь будут автоматически перехвачены @ExceptionHandler
+        User updatedUser = userService.updateUser(user);
+        return new ResponseEntity<>(updatedUser, HttpStatus.OK);
     }
 
     @GetMapping
