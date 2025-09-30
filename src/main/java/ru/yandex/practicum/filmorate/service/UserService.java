@@ -49,10 +49,6 @@ public class UserService {
         log.info("Пользователь {} отправил запрос в друзья пользователю {}.", userId, friendId);
     }
 
-    public void confirmFriendship(Long userId, Long friendId) {
-        log.info("Пользователь {} подтверждает дружбу с пользователем {}.", userId, friendId);
-        userStorage.confirmFriendship(userId, friendId);
-    }
 
 
     public void removeFriend(Long userId, Long friendId) {
@@ -86,6 +82,8 @@ public class UserService {
         log.info("Получение пользователя по ID: {}", id);
         return user;
     }
+
+
 }
 
 

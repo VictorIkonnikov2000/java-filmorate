@@ -91,14 +91,6 @@ public class UserController {
         return userService.getUserById(id); // Возвращает 200 OK
     }
 
-    @PutMapping("/{id}/friends/{friendId}/confirm")
-    @ResponseStatus(HttpStatus.NO_CONTENT) // 204 No Content - операция успешно выполнена, нет тела ответа.
-    public void confirmFriendship(@PathVariable Long id, @PathVariable Long friendId) {
-        log.info("Получен запрос PUT /users/{}/friends/{}/confirm. " +
-                "Пользователь {} подтверждает дружбу с пользователем {}.", id, friendId, id, friendId);
-        userService.confirmFriendship(id, friendId);
-        log.info("Дружба между пользователями {} и {} успешно подтверждена.", id, friendId);
-    }
 
 }
 
