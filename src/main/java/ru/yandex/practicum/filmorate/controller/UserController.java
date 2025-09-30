@@ -5,13 +5,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.UserService;
 
 import java.util.List;
-import java.util.Map;
+
 
 @RestController
 @RequestMapping("/users")
@@ -25,25 +23,6 @@ public class UserController {
         this.userService = userService;
     }
 
-    /**
-     * Обработчик исключения NotFoundException.
-     * Возвращает HTTP статус 404 NOT_FOUND с сообщением об ошибке.
-     * Эта аннотация позволяет Spring автоматически перехватывать NotFoundException,
-     * выброшенные методами контроллера, и обрабатывать их единообразно.
-     */
-    @ExceptionHandler(NotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public Map<String, String> handleNotFoundException(NotFoundException e) {
-        log.error("Resource not found: {}", e.getMessage());
-        return Map.of("error", e.getMessage());
-    }
-
-    @ExceptionHandler(ValidationException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Map<String, String> handleValidationException(ValidationException e) {
-        log.error("Validation error: {}", e.getMessage());
-        return Map.of("error", e.getMessage());
-    }
 
 
     @PostMapping
