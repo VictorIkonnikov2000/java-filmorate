@@ -258,7 +258,7 @@ public class UserDbStorage implements UserStorage {
 
         if (deleted == 0) {
             log.warn("Не найдено дружбы или запроса на дружбу между пользователем {} и {}.", userId, friendId);
-            throw new NotFoundException("Дружба или запрос на дружбу между пользователем " + userId + " и " + friendId + " не найден.");
+
         }
         log.info("Дружба или запрос на дружбу между пользователем {} и {} успешно удалены.", userId, friendId);
     }
