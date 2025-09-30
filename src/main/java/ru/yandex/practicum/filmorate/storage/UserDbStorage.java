@@ -121,7 +121,7 @@ public class UserDbStorage implements UserStorage {
      * @param userId   ID пользователя, отправляющего запрос.
      * @param friendId ID пользователя, которому отправлен запрос.
      * @throws ValidationException Если пользователи совпадают или дружба уже существует в любом статусе.
-     * @throws NotFoundException Если один из пользователей не найден.
+     * @throws NotFoundException   Если один из пользователей не найден.
      */
     @Override
     public void addFriend(Long userId, Long friendId) {
@@ -157,7 +157,7 @@ public class UserDbStorage implements UserStorage {
      *
      * @param userId   ID пользователя, который принимает запрос (пользователь 2 в одностороннем запросе).
      * @param friendId ID пользователя, который изначально отправил запрос (пользователь 1 в одностороннем запросе).
-     * @throws NotFoundException Если соответствующий запрос на дружбу не найден.
+     * @throws NotFoundException   Если соответствующий запрос на дружбу не найден.
      * @throws ValidationException Если дружба уже подтверждена или нечего подтверждать.
      */
     @Override
