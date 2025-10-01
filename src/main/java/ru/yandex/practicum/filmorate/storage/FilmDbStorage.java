@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -17,7 +18,9 @@ import ru.yandex.practicum.filmorate.validate.FilmValidate;
 
 import java.sql.Date;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -202,36 +205,49 @@ public class FilmDbStorage implements FilmStorage {
 
     // --- Методы для работы с жанрами фильма ---
 
-    // Сохраняет жанры для нового фильма
+    // Пример кода из предыдущего ответа, адаптированный под текущий контекст
+// Он предпочтительнее вашего текущего for-each с отдельными INSERT запросами.
     private void saveFilmGenres(Film film) {
         if (film.getGenres() == null || film.getGenres().isEmpty()) {
-            film.setGenres(List.of()); // Устанавливаем пустой список, если жанров нет
+            film.setGenres(List.of());
             return;
         }
-        String sql = "INSERT INTO film_genres (film_id, genre_id) VALUES (?, ?)";
 
-        // Используем Set для удаления дубликатов жанров
-        Set<Long> uniqueGenreIds = film.getGenres().stream()
-                .map(Genre::getId)
-                .filter(Objects::nonNull) // Фильтруем null ID, если такие могут быть
-                .collect(Collectors.toSet());
+        List<Genre> distinctAndSortedGenres = film.getGenres().stream()
+                .filter(g -> g.getId() != null)
+                .distinct() // Использует equals/hashCode Genre, или убедитесь, что они уникальны по ID.
+                .sorted(Comparator.comparing(Genre::getId)) // Сортируем для предсказуемости
+                .collect(Collectors.toList());
 
-        for (Long genreId : uniqueGenreIds) {
-            // Проверяем существование жанра перед вставкой
-            genreStorage.getGenreById(genreId)
-                    .orElseThrow(() -> new NotFoundException("Genre not found with ID: " + genreId));
-            try {
-                jdbcTemplate.update(sql, film.getId(), genreId);
-            } catch (DataIntegrityViolationException e) {
-                // Если жанр уже связан с фильмом, это может быть не ошибка, а уже существующая запись
-                // или неверный ID, но ForeignKey Constraint обычно вызовет это
-                // Можно проигнорировать или залогировать, в зависимости от бизнес-логики.
-                System.out.println("Failed to add genre " + genreId + " to film " + film.getId() + ". It might already exist or ID is invalid: " + e.getMessage());
-            }
+        if (distinctAndSortedGenres.isEmpty()) {
+            film.setGenres(List.of());
+            return;
         }
-        // После сохранения, перечитаем жанры, чтобы убедиться, что они соответствуют базе
-        film.setGenres(getFilmGenres(film.getId()));
+
+        String sql = "INSERT INTO film_genres (film_id, genre_id) VALUES (?, ?)"; // Исправлено на film_genres
+        try {
+            jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+                @Override
+                public void setValues(PreparedStatement ps, int i) throws SQLException {
+                    Genre genre = distinctAndSortedGenres.get(i);
+                    // Проверяем существование жанра перед вставкой, N+1 проблема здесь.
+                    genreStorage.getGenreById(genre.getId())
+                            .orElseThrow(() -> new NotFoundException("Genre not found with ID: " + genre.getId()));
+                    ps.setLong(1, film.getId());
+                    ps.setLong(2, genre.getId());
+                }
+
+                @Override
+                public int getBatchSize() {
+                    return distinctAndSortedGenres.size();
+                }
+            });
+        } catch (DataIntegrityViolationException e) {
+            throw new RuntimeException("Failed to save film genres for film ID: " + film.getId(), e);
+        }
+        film.setGenres(getFilmGenres(film.getId())); // Перечитываем для актуальности
     }
+
 
     // Обновляет жанры для существующего фильма (удаляет все старые и добавляет новые)
     private void updateFilmGenres(Film film) {
