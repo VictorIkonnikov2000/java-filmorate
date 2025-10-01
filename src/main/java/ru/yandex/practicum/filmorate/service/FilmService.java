@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
-import ru.yandex.practicum.filmorate.exception.ValidationException; // Добавляем импорт ValidationException
+import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.MpaRating;
@@ -13,8 +13,10 @@ import ru.yandex.practicum.filmorate.storage.GenreStorage;
 import ru.yandex.practicum.filmorate.storage.MpaRatingStorage;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
-import java.time.LocalDate; // Добавляем импорт для LocalDate
+import java.time.LocalDate;
+import java.util.Comparator; // Добавляем импорт для Comparator
 import java.util.List;
+import java.util.Set; // Добавляем импорт для Set
 import java.util.stream.Collectors;
 
 @Service
@@ -22,24 +24,53 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class FilmService {
 
-    private final  FilmStorage filmStorage;
-    private final  UserStorage userStorage; // Потребуется для проверки существования пользователя
-    private final  GenreStorage genreStorage; // Потребуется для проверки существования жанра
-    private final  MpaRatingStorage mpaRatingStorage; // Потребуется для проверки существования MPA
+    private final FilmStorage filmStorage;
+    private final UserStorage userStorage;
+    private final GenreStorage genreStorage;
+    private final MpaRatingStorage mpaRatingStorage;
 
-    // Минимальная дата релиза, перенесена из FilmController для централизованной валидации
     private static final LocalDate MIN_RELEASE_DATE = LocalDate.of(1895, 12, 28);
+
+    // Вспомогательный метод для валидации и установки жанров
+    private List<Genre> processFilmGenres(Film film) {
+        if (film.getGenres() == null || film.getGenres().isEmpty()) {
+            return List.of(); // Если жанров нет в запросе, возвращаем пустой список
+        }
+
+        // 1. Собираем уникальные ID жанров из пришедшего фильма, чтобы избежать дубликатов
+        Set<Long> requestedGenreIds = film.getGenres().stream()
+                .map(Genre::getId)
+                .collect(Collectors.toSet());
+
+        // 2. Делаем ОДИН запрос к базе данных, чтобы получить все существующие жанры по этим ID
+        List<Genre> existingGenres = genreStorage.getGenresByIds(requestedGenreIds);
+
+        // 3. Проверяем, что все запрошенные ID были найдены в базе данных
+        Set<Long> foundGenreIds = existingGenres.stream()
+                .map(Genre::getId)
+                .collect(Collectors.toSet());
+
+        if (foundGenreIds.size() != requestedGenreIds.size()) {
+            // Находим ID жанров, которые были запрошены, но не найдены в базе
+            requestedGenreIds.removeAll(foundGenreIds);
+            String missingIds = requestedGenreIds.stream()
+                    .map(String::valueOf)
+                    .collect(Collectors.joining(", "));
+            log.warn("Не найден(ы) жанр(ы) с ID: {}", missingIds);
+            throw new NotFoundException("Не найден(ы) жанр(ы) с ID: " + missingIds);
+        }
+
+        // 4. Сортируем найденные жанры по их ID для обеспечения консистентного порядка
+        // Это хорошая практика, так как порядок в Set и List может быть произвольным
+        return existingGenres.stream()
+                .sorted(Comparator.comparing(Genre::getId))
+                .collect(Collectors.toList());
+    }
 
 
     public Film createFilm(Film film) {
         log.debug("Начало создания фильма: {}", film);
-        // Валидация даты релиза, перенесена сюда из контроллера для проверки перед сохранением.
-        // Хотя основная валидация будет в контроллере, здесь можно продублировать
-        // или использовать общую валидацию.
-        if (film.getReleaseDate() == null || film.getReleaseDate().isBefore(MIN_RELEASE_DATE)) {
-            // В случае ошибки валидации, выбрасываем ValidationException
-            throw new ValidationException("Дата релиза не может быть раньше " + MIN_RELEASE_DATE.format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy")) + ".");
-        }
+        validateFilmReleaseDate(film);
 
         // Проверяем существование MPA рейтинга
         MpaRating mpa = mpaRatingStorage.getMpaById(film.getMpa().getId());
@@ -49,17 +80,8 @@ public class FilmService {
         }
         film.setMpa(mpa);
 
-        // Валидируем жанры и исключаем дубликаты
-        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
-            List<Genre> distinctAndValidGenres = film.getGenres().stream()
-                    .distinct() // <- Удаляем дубликаты тут
-                    .map(genre -> genreStorage.getGenreById(genre.getId())
-                            .orElseThrow(() -> new NotFoundException("Жанр с ID " + genre.getId() + " не найден.")))
-                    .collect(Collectors.toList());
-            film.setGenres(distinctAndValidGenres);
-        } else {
-            film.setGenres(List.of()); // Устанавливаем пустой список, если жанров нет, чтобы избежать NullPointerException
-        }
+        // Обрабатываем жанры с улучшенной логикой
+        film.setGenres(processFilmGenres(film));
 
         Film createdFilm = filmStorage.createFilm(film);
         log.info("Фильм ID {} успешно создан", createdFilm.getId());
@@ -74,10 +96,7 @@ public class FilmService {
             throw new NotFoundException("Фильм с ID " + film.getId() + " не найден для обновления.");
         }
 
-        // Валидация даты релиза при обновлении
-        if (film.getReleaseDate() == null || film.getReleaseDate().isBefore(MIN_RELEASE_DATE)) {
-            throw new ValidationException("Дата релиза не может быть раньше " + MIN_RELEASE_DATE.format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy")) + ".");
-        }
+        validateFilmReleaseDate(film);
 
         // Проверяем существование MPA рейтинга
         MpaRating mpa = mpaRatingStorage.getMpaById(film.getMpa().getId());
@@ -87,21 +106,18 @@ public class FilmService {
         }
         film.setMpa(mpa);
 
-        // Валидируем жанры и исключаем дубликаты при обновлении
-        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
-            List<Genre> distinctAndValidGenres = film.getGenres().stream()
-                    .distinct()
-                    .map(genre -> genreStorage.getGenreById(genre.getId())
-                            .orElseThrow(() -> new NotFoundException("Жанр с ID " + genre.getId() + " не найден.")))
-                    .collect(Collectors.toList());
-            film.setGenres(distinctAndValidGenres);
-        } else {
-            film.setGenres(List.of()); // Устанавливаем пустой список, если жанров нет
-        }
+        // Обрабатываем жанры с улучшенной логикой
+        film.setGenres(processFilmGenres(film));
 
         Film updatedFilm = filmStorage.updateFilm(film);
         log.info("Фильм ID {} успешно обновлен", updatedFilm.getId());
         return updatedFilm;
+    }
+
+    private void validateFilmReleaseDate(Film film) {
+        if (film.getReleaseDate() == null || film.getReleaseDate().isBefore(MIN_RELEASE_DATE)) {
+            throw new ValidationException("Дата релиза не может быть раньше " + MIN_RELEASE_DATE.format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy")) + ".");
+        }
     }
 
     public List<Film> getAllFilms() {
