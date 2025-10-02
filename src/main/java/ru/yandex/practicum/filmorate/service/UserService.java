@@ -44,11 +44,9 @@ public class UserService {
             log.warn("Пользователь с ID {} попытался добавить сам себя в друзья.", userId);
             throw new ValidationException("Пользователь не может добавить сам себя в друзья.");
         }
-        // Проверка существования пользователей теперь инкапсулирована в userStorage.addFriend
         userStorage.addFriend(userId, friendId);
         log.info("Пользователь {} отправил запрос в друзья пользователю {}.", userId, friendId);
     }
-
 
 
     public void removeFriend(Long userId, Long friendId) {
@@ -56,33 +54,28 @@ public class UserService {
             log.warn("Пользователь с ID {} попытался удалить сам себя из друзей.", userId);
             throw new ValidationException("Пользователь не может удалить сам себя из друзей.");
         }
-        // Проверка существования пользователей и дружбы теперь инкапсулирована в userStorage.removeFriend
         userStorage.removeFriend(userId, friendId);
         log.info("Пользователь {} удалил из друзей пользователя {}.", userId, friendId);
     }
 
 
     public List<User> getFriends(Long id) {
-        // Проверка существования пользователя теперь инкапсулирована в userStorage.getFriends
         log.info("Получение списка друзей для пользователя с ID: {}", id);
         return userStorage.getFriends(id);
     }
 
 
     public List<User> getCommonFriends(Long userId, Long otherId) {
-        // Проверка существования пользователей теперь инкапсулирована в userStorage.getCommonFriends
         log.info("Получение списка общих друзей для пользователей {} и {}.", userId, otherId);
         return userStorage.getCommonFriends(userId, otherId);
     }
 
 
     public User getUserById(Long id) {
-        // userStorage.getUserById теперь сам выбрасывает NotFoundException если пользователь не найден.
         User user = userStorage.getUserById(id);
         log.info("Получение пользователя по ID: {}", id);
         return user;
     }
-
 
 }
 

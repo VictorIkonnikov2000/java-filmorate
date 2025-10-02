@@ -13,7 +13,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@Slf4j // Добавляем логирование
+@Slf4j
 public class MpaController {
 
     private final MpaRatingService mpaRatingService;
@@ -25,9 +25,9 @@ public class MpaController {
     }
 
     @GetMapping("/mpa/{id}")
-    public ResponseEntity<MpaRating> getMpaById(@PathVariable Integer id) { // Изменяем Long на Integer
+    public ResponseEntity<MpaRating> getMpaById(@PathVariable Integer id) {
         log.info("Received GET request for /mpa/{}", id);
-        // Аналогично GenreController, обработка NotFoundException может быть делегирована ErrorHandler.
+
         try {
             MpaRating mpaRating = mpaRatingService.getMpaById(Long.valueOf(id));
             log.info("Returning MPA rating: {}", mpaRating);

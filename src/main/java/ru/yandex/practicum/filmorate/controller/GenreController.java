@@ -13,7 +13,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@Slf4j // Добавляем логирование
+@Slf4j
 public class GenreController {
 
     private final GenreService genreService;
@@ -25,11 +25,9 @@ public class GenreController {
     }
 
     @GetMapping("/genres/{id}")
-    public ResponseEntity<Genre> getGenreById(@PathVariable Integer id) { // Изменяем Long на Integer
+    public ResponseEntity<Genre> getGenreById(@PathVariable Integer id) {
         log.info("Received GET request for /genres/{}", id);
-        // Обработка NotFoundException теперь делегируется ErrorHandler,
-        // но для демонстрации можно оставить try-catch здесь.
-        // Более чистое решение - использовать @ControllerAdvice (ErrorHandler в предыдущем ответе).
+
         try {
             Genre genre = genreService.getGenreById(Long.valueOf(id));
             log.info("Returning genre: {}", genre);

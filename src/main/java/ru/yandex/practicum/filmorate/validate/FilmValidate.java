@@ -13,7 +13,7 @@ public class FilmValidate {
     public static boolean validateFilm(Film film) {
 
         if (film.getName() == null || film.getName().isEmpty()) {
-            return false; //Возвращаем false, если валидация не пройдена.
+            return false;
         }
 
 
@@ -30,7 +30,7 @@ public class FilmValidate {
         if (film.getDuration() <= 0) {
             return false;
         }
-        return true; //Возвращаем true, если валидация пройдена.
+        return true;
     }
 
 }

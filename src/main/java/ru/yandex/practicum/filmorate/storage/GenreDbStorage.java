@@ -33,8 +33,8 @@ public class GenreDbStorage implements GenreStorage {
         List<Genre> genres = getAllGenres();
         if (genres.isEmpty()) {
             log.info("Таблица genres пуста, начинаем добавление стандартных жанров.");
-            // Используем addGenre, чтобы ID генерировался автоматически базой данных
-            addGenre(new Genre(null, "Комедия")); // Передаем null для ID
+
+            addGenre(new Genre(null, "Комедия"));
             addGenre(new Genre(null, "Драма"));
             addGenre(new Genre(null, "Мультфильм"));
             addGenre(new Genre(null, "Триллер"));
@@ -46,19 +46,15 @@ public class GenreDbStorage implements GenreStorage {
         }
     }
 
-    // Метод addInitialGenre больше не нужен, его функциональность перенесена в initializeGenresIfEmpty
-    // и осуществляется через addGenre.
 
     @Override
     public List<Genre> getAllGenres() {
-        // ИСПРАВЛЕНО: используем genre_id
         String sql = "SELECT genre_id, name FROM genres ORDER BY genre_id";
         return jdbcTemplate.query(sql, genreRowMapper());
     }
 
     @Override
     public Optional<Genre> getGenreById(Long id) {
-        // ИСПРАВЛЕНО: используем genre_id
         String sql = "SELECT genre_id, name FROM genres WHERE genre_id = ?";
         try {
             Genre genre = jdbcTemplate.queryForObject(sql, genreRowMapper(), id);
@@ -69,20 +65,14 @@ public class GenreDbStorage implements GenreStorage {
         }
     }
 
-    /**
-     * Создает RowMapper для преобразования ResultSet в объект Genre.
-     * ИСПРАВЛЕНО: получение ID из столбца 'genre_id'
-     *
-     * @return RowMapper<Genre>
-     */
+
     private RowMapper<Genre> genreRowMapper() {
-        // ИСПРАВЛЕНО: получение ID из столбца 'genre_id'
         return (rs, rowNum) -> new Genre(rs.getLong("genre_id"), rs.getString("name"));
     }
 
     @Override
     public Genre addGenre(Genre genre) {
-        String sql = "INSERT INTO genres (name) VALUES (?)"; // ID будет сгенерирован автоматически
+        String sql = "INSERT INTO genres (name) VALUES (?)";
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
         jdbcTemplate.update(connection -> {
@@ -92,14 +82,13 @@ public class GenreDbStorage implements GenreStorage {
         }, keyHolder);
 
         Long generatedId = Objects.requireNonNull(keyHolder.getKey()).longValue();
-        genre.setId(generatedId); // Устанавливаем сгенерированный ID в объект
+        genre.setId(generatedId);
         log.info("Добавлен новый жанр: {} с ID: {}", genre.getName(), genre.getId());
         return genre;
     }
 
     @Override
     public Genre updateGenre(Genre genre) {
-        // ИСПРАВЛЕНО: используем genre_id
         String sql = "UPDATE genres SET name = ? WHERE genre_id = ?";
         int rowsAffected = jdbcTemplate.update(sql, genre.getName(), genre.getId());
         if (rowsAffected == 0) {
@@ -112,7 +101,6 @@ public class GenreDbStorage implements GenreStorage {
 
     @Override
     public void deleteGenre(Long id) {
-        // ИСПРАВЛЕНО: используем genre_id
         String sql = "DELETE FROM genres WHERE genre_id = ?";
         int rowsAffected = jdbcTemplate.update(sql, id);
         if (rowsAffected == 0) {
@@ -129,15 +117,12 @@ public class GenreDbStorage implements GenreStorage {
         }
 
         String inSql = String.join(",", Collections.nCopies(genreIds.size(), "?"));
-        // ИСПРАВЛЕНО: используем genre_id
         String sql = String.format("SELECT genre_id, name FROM genres WHERE genre_id IN (%s) ORDER BY genre_id ASC", inSql);
 
-        // Передаем список ID как массив для аргументов
         return jdbcTemplate.query(sql, genreIds.toArray(), this::mapRowToGenre);
     }
 
     private Genre mapRowToGenre(ResultSet rs, int rowNum) throws SQLException {
-        // ИСПРАВЛЕНО: получение ID из столбца 'genre_id'
         return Genre.builder()
                 .id(rs.getLong("genre_id"))
                 .name(rs.getString("name"))

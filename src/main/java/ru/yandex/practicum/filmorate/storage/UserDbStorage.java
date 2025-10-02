@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.validate.UserValidate; // Предполагается, что это статический метод или синглтон
+import ru.yandex.practicum.filmorate.validate.UserValidate;
 
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -41,7 +41,7 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public User createUser(User user) {
-        UserValidate.validateUser(user); // Вызываем статический метод валидации
+        UserValidate.validateUser(user);
         if (user.getName() == null || user.getName().isEmpty()) {
             user.setName(user.getLogin());
         }
@@ -68,12 +68,12 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public User updateUser(User user) {
-        UserValidate.validateUser(user); // Вызываем статический метод валидации
+        UserValidate.validateUser(user);
         if (user.getName() == null || user.getName().isEmpty()) {
             user.setName(user.getLogin());
         }
 
-        getUserById(user.getId()); // Проверяем, что пользователь существует
+        getUserById(user.getId());
 
         String sql = "UPDATE users SET email = ?, login = ?, name = ?, birthday = ? WHERE user_id = ?";
         int updatedRows = jdbcTemplate.update(sql, user.getEmail(), user.getLogin(), user.getName(), Date.valueOf(user.getBirthday()), user.getId());
@@ -110,15 +110,15 @@ public class UserDbStorage implements UserStorage {
         if (userId.equals(friendId)) {
             throw new ValidationException("Пользователь не может добавить себя в друзья.");
         }
-        getUserById(userId); // Check for existence
-        getUserById(friendId); // Check for existence
+        getUserById(userId);
+        getUserById(friendId);
 
-        String insertSql = "INSERT INTO friends (user1_id, user2_id) VALUES (?, ?)";  // Simplified: no status
+        String insertSql = "INSERT INTO friends (user1_id, user2_id) VALUES (?, ?)";
         try {
             jdbcTemplate.update(insertSql, userId, friendId);
             log.info("Пользователь {} добавил в друзья пользователя {}.", userId, friendId);
         } catch (org.springframework.dao.DuplicateKeyException e) {
-            log.warn("Пользователь {} уже добавил в друзья пользователя {}.", userId, friendId); // Or handle as needed (e.g., update status if you decide to use status later)
+            log.warn("Пользователь {} уже добавил в друзья пользователя {}.", userId, friendId);
         }
 
 
@@ -145,12 +145,12 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public List<User> getFriends(Long userId) {
-        getUserById(userId); // Check for existence
+        getUserById(userId);
 
         String sql = "SELECT u.user_id, u.email, u.login, u.name, u.birthday " +
                 "FROM users AS u " +
                 "JOIN friends AS f ON u.user_id = f.user2_id " +
-                "WHERE f.user1_id = ?"; // Только тех, кого userId добавил
+                "WHERE f.user1_id = ?";
         return jdbcTemplate.query(sql, userRowMapper(), userId);
     }
 
@@ -160,7 +160,6 @@ public class UserDbStorage implements UserStorage {
         getUserById(userId);
         getUserById(otherUserId);
 
-        // Находим пересечение множеств друзей userId и otherUserId
         String sql = "SELECT u.user_id, u.email, u.login, u.name, u.birthday " +
                 "FROM users AS u " +
                 "WHERE u.user_id IN (SELECT f.user2_id FROM friends f WHERE f.user1_id = ?) " +

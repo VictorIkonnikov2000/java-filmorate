@@ -6,8 +6,8 @@ import lombok.Data;
 @Data
 @Builder
 public class Genre {
-    private Long id;       // Уникальный идентификатор жанра
-    private String name;// Название жанра
+    private Long id;
+    private String name;
 
     public Genre(Long id, String name) {
         this.id = id;

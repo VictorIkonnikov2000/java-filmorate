@@ -6,11 +6,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.exception.ValidationException; // Используется для бизнес-валидации
+import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
 
-import java.time.LocalDate; // Добавляем импорт для LocalDate
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -20,7 +20,7 @@ public class FilmController {
 
     private final FilmService filmService;
 
-    // Определяем минимальную дату релиза
+
     private static final LocalDate MIN_RELEASE_DATE = LocalDate.of(1895, 12, 28);
 
     @Autowired
@@ -31,9 +31,7 @@ public class FilmController {
     @PostMapping
     public ResponseEntity<Film> createFilm(@Valid @RequestBody Film film) {
         log.info("Получен POST запрос на создание фильма: {}", film);
-        // Выполняем дополнительную валидацию, которой нет во встроенных аннотациях Jakarta Validation
         validateFilm(film);
-
         Film createdFilm = filmService.createFilm(film);
         log.info("Фильм успешно создан с ID: {}", createdFilm.getId());
         return new ResponseEntity<>(createdFilm, HttpStatus.CREATED);
@@ -42,9 +40,7 @@ public class FilmController {
     @PutMapping
     public ResponseEntity<Film> updateFilm(@Valid @RequestBody Film film) {
         log.info("Получен PUT запрос на обновление фильма с телом: {}", film);
-        // При обновлении также требуется валидация
         validateFilm(film);
-
         Film updatedFilm = filmService.updateFilm(film);
         log.info("Фильм успешно обновлен с ID: {}", updatedFilm.getId());
         return ResponseEntity.ok(updatedFilm);
@@ -71,7 +67,7 @@ public class FilmController {
         log.info("Получен PUT запрос на добавление лайка фильму {} от пользователя {}", id, userId);
         filmService.addLike(id, userId);
         log.info("Лайк успешно добавлен");
-        return ResponseEntity.noContent().build(); // 204 No Content - успешное выполнение без тела ответа
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}/like/{userId}")
@@ -79,7 +75,7 @@ public class FilmController {
         log.info("Получен DELETE запрос на удаление лайка у фильма {} от пользователя {}", id, userId);
         filmService.removeLike(id, userId);
         log.info("Лайк успешно удален");
-        return ResponseEntity.noContent().build(); // 204 No Content - успешное выполнение без тела ответа
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/popular")
@@ -90,30 +86,23 @@ public class FilmController {
         return ResponseEntity.ok(popularFilms);
     }
 
-    /**
-     * Метод для выполнения дополнительной бизнес-валидации объекта Film.
-     * Выбрасывает ValidationException, если обнаружены некорректные данные.
-     *
-     * @param film объект Film для валидации.
-     * @throws ValidationException если данные фильма не соответствуют требованиям.
-     */
+
     private void validateFilm(Film film) {
-        // Валидация названия
         if (film.getName() == null || film.getName().isBlank()) {
             log.warn("Ошибка валидации: название фильма пустое или null. Фильм: {}", film);
             throw new ValidationException("Название фильма не может быть пустым.");
         }
-        // Валидация описания
+
         if (film.getDescription() != null && film.getDescription().length() > 200) {
             log.warn("Ошибка валидации: описание фильма превышает 200 символов. Длина: {}. Фильм: {}", film.getDescription().length(), film);
             throw new ValidationException("Длина описания фильма не должна превышать 200 символов.");
         }
-        // Валидация даты релиза
+
         if (film.getReleaseDate() == null || film.getReleaseDate().isBefore(MIN_RELEASE_DATE)) {
             log.warn("Ошибка валидации: дата релиза не может быть раньше {}. Указана: {}. Фильм: {}", MIN_RELEASE_DATE, film.getReleaseDate(), film);
             throw new ValidationException("Дата релиза не может быть раньше " + MIN_RELEASE_DATE.format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy")) + ".");
         }
-        // Валидация продолжительности
+
         if (film.getDuration() != null && film.getDuration() <= 0) {
             log.warn("Ошибка валидации: продолжительность фильма должна быть положительной. Указана: {}. Фильм: {}", film.getDuration(), film);
             throw new ValidationException("Продолжительность фильма должна быть положительной.");
