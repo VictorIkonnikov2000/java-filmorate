@@ -5,12 +5,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.UserService;
 
 import java.util.List;
-import java.util.Map;
+
 
 @RestController
 @RequestMapping("/users")
@@ -24,67 +23,50 @@ public class UserController {
         this.userService = userService;
     }
 
+
     @PostMapping
-    public ResponseEntity<?> createUser(@RequestBody User user) {
+    public ResponseEntity<User> createUser(@RequestBody User user) {
         log.info("Получен запрос POST /users с телом: {}", user);
-        ResponseEntity<?> response = userService.createUser(user);
-        log.info("Ответ на запрос POST /users: {}", response);
-        return response;
+        User createdUser = userService.createUser(user);
+        return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
     }
 
     @PutMapping
-    public ResponseEntity<?> updateUser(@RequestBody User user) {
+    public ResponseEntity<User> updateUser(@RequestBody User user) {
         log.info("Получен запрос PUT /users с телом: {}", user);
-        ResponseEntity<?> response = userService.updateUser(user);
-        log.info("Ответ на запрос PUT /users: {}", response);
-        return response;
+        User updatedUser = userService.updateUser(user);
+        return new ResponseEntity<>(updatedUser, HttpStatus.OK);
     }
 
     @GetMapping
-    public ResponseEntity<List<User>> getAllUsers() {
+    public List<User> getAllUsers() {
         log.info("Получен запрос GET /users");
-        ResponseEntity<List<User>> response = userService.getAllUsers();
-        log.info("Ответ на запрос GET /users: {}", response.getBody());
-        return response;
+        return userService.getAllUsers();
     }
 
+
     @PutMapping("/{id}/friends/{friendId}")
-    public ResponseEntity<?> addFriend(@PathVariable Long id, @PathVariable Long friendId) {
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void addFriend(@PathVariable Long id, @PathVariable Long friendId) {
         log.info("Получен запрос PUT /users/{}/friends/{}", id, friendId);
-        try {
-            userService.addFriend(id, friendId);
-            log.info("Пользователи {} и {} добавлены в друзья.", id, friendId);
-            return ResponseEntity.status(HttpStatus.OK).build();
-        } catch (NotFoundException e) {
-            log.warn("Пользователь с id {} или {} не найден.", id, friendId);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом
-        }
+        userService.addFriend(id, friendId);
+        log.info("Пользователи {} и {} добавлены в друзья.", id, friendId);
     }
 
     @DeleteMapping("/{id}/friends/{friendId}")
-    public ResponseEntity<?> deleteFriend(@PathVariable Long id, @PathVariable Long friendId) {
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteFriend(@PathVariable Long id, @PathVariable Long friendId) {
         log.info("Получен запрос DELETE /users/{}/friends/{}", id, friendId);
-        try {
-            userService.removeFriend(id, friendId);
-            log.info("Пользователи {} и {} удалены из друзей.", id, friendId);
-            return ResponseEntity.status(HttpStatus.OK).build();
-        } catch (NotFoundException e) {
-            log.warn("Пользователь с id {} или {} не найден.", id, friendId);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом
-        }
+        userService.removeFriend(id, friendId);
+        log.info("Пользователи {} и {} удалены из друзей.", id, friendId);
     }
 
     @GetMapping("/{id}/friends")
-    public ResponseEntity<?> getFriends(@PathVariable Long id) {
+    public List<User> getFriends(@PathVariable Long id) {
         log.info("Получен запрос GET /users/{}/friends", id);
-        try {
-            List<User> friends = userService.getFriends(id);
-            log.info("Список друзей пользователя {}: {}", id, friends);
-            return new ResponseEntity<>(friends, HttpStatus.OK);
-        } catch (NotFoundException e) {
-            log.warn("Пользователь с id {} не найден.", id);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом
-        }
+        List<User> friends = userService.getFriends(id);
+        log.info("Список друзей пользователя {}: {}", id, friends);
+        return friends;
     }
 
     @GetMapping("/{id}/friends/common/{otherId}")
@@ -96,16 +78,12 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getUserById(@PathVariable Long id) {
-        try {
-            User user = userService.getUserById(id);
-            return new ResponseEntity<>(user, HttpStatus.OK);
-        } catch (NotFoundException e) {
-            log.warn("Пользователь с id {} не найден.", id);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом
-        }
+    public User getUserById(@PathVariable Long id) {
+        log.info("Запрос getUserById для id: {}", id);
+        return userService.getUserById(id);
     }
 }
+
 
 
 

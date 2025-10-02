@@ -1,27 +1,27 @@
 package ru.yandex.practicum.filmorate.controller;
 
-import jakarta.validation.constraints.Positive;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
 
-
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/films")
 @Slf4j
-@Validated
 public class FilmController {
 
     private final FilmService filmService;
+
+
+    private static final LocalDate MIN_RELEASE_DATE = LocalDate.of(1895, 12, 28);
 
     @Autowired
     public FilmController(FilmService filmService) {
@@ -29,84 +29,94 @@ public class FilmController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createFilm(@RequestBody Film film) {
-        log.info("Получен запрос POST /films с телом: {}", film);
-        ResponseEntity<?> response = filmService.createFilm(film);
-        log.info("Ответ на запрос POST /films: {}", response);
-        return response;
+    public ResponseEntity<Film> createFilm(@Valid @RequestBody Film film) {
+        log.info("Получен POST запрос на создание фильма: {}", film);
+        validateFilm(film);
+        Film createdFilm = filmService.createFilm(film);
+        log.info("Фильм успешно создан с ID: {}", createdFilm.getId());
+        return new ResponseEntity<>(createdFilm, HttpStatus.CREATED);
     }
 
     @PutMapping
-    public ResponseEntity<?> updateFilm(@RequestBody Film film) {
-        log.info("Получен запрос PUT /films с телом: {}", film);
-        ResponseEntity<?> response = filmService.updateFilm(film);
-        log.info("Ответ на запрос PUT /films: {}", response);
-        return response;
+    public ResponseEntity<Film> updateFilm(@Valid @RequestBody Film film) {
+        log.info("Получен PUT запрос на обновление фильма с телом: {}", film);
+        validateFilm(film);
+        Film updatedFilm = filmService.updateFilm(film);
+        log.info("Фильм успешно обновлен с ID: {}", updatedFilm.getId());
+        return ResponseEntity.ok(updatedFilm);
     }
 
     @GetMapping
     public ResponseEntity<List<Film>> getAllFilms() {
-        log.info("Получен запрос GET /films");
-        ResponseEntity<List<Film>> response = filmService.getAllFilms();
-        log.info("Ответ на запрос GET /films: {}", response.getBody());
-        return response;
+        log.info("Получен GET запрос на получение всех фильмов");
+        List<Film> films = filmService.getAllFilms();
+        log.info("Возвращено {} фильмов", films.size());
+        return ResponseEntity.ok(films);
     }
 
-    @GetMapping("/{id}") // Добавлен метод для получения фильма по ID
-    public ResponseEntity<?> getFilmById(@PathVariable @Positive Long id) {
-        try {
-            Film film = filmService.getFilmById(id); // предполагается, что такой метод есть в FilmService
-            return new ResponseEntity<>(film, HttpStatus.OK);
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
-        }
+    @GetMapping("/{id}")
+    public ResponseEntity<Film> getFilmById(@PathVariable Long id) {
+        log.info("Получен GET запрос на получение фильма по ID: {}", id);
+        Film film = filmService.getFilmById(id);
+        log.info("Возвращен фильм: {}", film);
+        return ResponseEntity.ok(film);
     }
 
     @PutMapping("/{id}/like/{userId}")
-    public ResponseEntity<?> addLike(@PathVariable @Positive Long id, @PathVariable @Positive Long userId) {
-        log.info("Получен запрос PUT /films/{}/like/{}", id, userId);
-        try {
-            filmService.addLike(id, userId);
-            log.info("Пользователь {} поставил лайк фильму {}.", userId, id);
-            return ResponseEntity.ok().build(); // Возвращаем 200 OK
-        } catch (NotFoundException e) {
-            log.warn("Фильм или пользователь не найден: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом ошибки
-        }
+    public ResponseEntity<Void> addLike(@PathVariable Long id, @PathVariable Long userId) {
+        log.info("Получен PUT запрос на добавление лайка фильму {} от пользователя {}", id, userId);
+        filmService.addLike(id, userId);
+        log.info("Лайк успешно добавлен");
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}/like/{userId}")
-    public ResponseEntity<?> deleteLike(@PathVariable @Positive Long id, @PathVariable @Positive Long userId) {
-        log.info("Получен запрос DELETE /films/{}/like/{}", id, userId);
-        try {
-            filmService.removeLike(id, userId);//изменил
-            log.info("Пользователь {} удалил лайк у фильма {}.", userId, id);
-            return ResponseEntity.ok().build(); // Возвращаем 200 OK
-        } catch (NotFoundException e) {
-            log.warn("Фильм или пользователь не найден: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage())); // Возвращаем 404 с телом ошибки
-        }
+    public ResponseEntity<Void> removeLike(@PathVariable Long id, @PathVariable Long userId) {
+        log.info("Получен DELETE запрос на удаление лайка у фильма {} от пользователя {}", id, userId);
+        filmService.removeLike(id, userId);
+        log.info("Лайк успешно удален");
+        return ResponseEntity.noContent().build();
     }
-
 
     @GetMapping("/popular")
-    public List<Film> getPopularFilms(@RequestParam(defaultValue = "10") Integer count) {
-        log.info("Получен запрос GET /films/popular с параметром count: {}", count);
+    public ResponseEntity<List<Film>> getPopularFilms(@RequestParam(defaultValue = "10") int count) {
+        log.info("Получен GET запрос на получение {} популярных фильмов", count);
         List<Film> popularFilms = filmService.getPopularFilms(count);
-        log.info("Список популярных фильмов: {}", popularFilms);
-        return popularFilms;
+        log.info("Возвращено {} популярных фильмов", popularFilms.size());
+        return ResponseEntity.ok(popularFilms);
     }
 
-    @ExceptionHandler(NotFoundException.class)
-    public ResponseEntity<Map<String, String>> handleFilmNotFoundException(NotFoundException e) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
-    }
 
-    @ExceptionHandler(ru.yandex.practicum.filmorate.exception.NotFoundException.class)
-    public ResponseEntity<Map<String, String>> handleUserNotFoundException(ru.yandex.practicum.filmorate.exception.NotFoundException e) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+    private void validateFilm(Film film) {
+        if (film.getName() == null || film.getName().isBlank()) {
+            log.warn("Ошибка валидации: название фильма пустое или null. Фильм: {}", film);
+            throw new ValidationException("Название фильма не может быть пустым.");
+        }
+
+        if (film.getDescription() != null && film.getDescription().length() > 200) {
+            log.warn("Ошибка валидации: описание фильма превышает 200 символов. Длина: {}. Фильм: {}", film.getDescription().length(), film);
+            throw new ValidationException("Длина описания фильма не должна превышать 200 символов.");
+        }
+
+        if (film.getReleaseDate() == null || film.getReleaseDate().isBefore(MIN_RELEASE_DATE)) {
+            log.warn("Ошибка валидации: дата релиза не может быть раньше {}. Указана: {}. Фильм: {}", MIN_RELEASE_DATE, film.getReleaseDate(), film);
+            throw new ValidationException("Дата релиза не может быть раньше " + MIN_RELEASE_DATE.format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy")) + ".");
+        }
+
+        if (film.getDuration() != null && film.getDuration() <= 0) {
+            log.warn("Ошибка валидации: продолжительность фильма должна быть положительной. Указана: {}. Фильм: {}", film.getDuration(), film);
+            throw new ValidationException("Продолжительность фильма должна быть положительной.");
+        }
     }
 }
+
+
+
+
+
+
+
+
 
 
 
